@@ -9,6 +9,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { ShipmentFiltersSheet, ShipmentFilters, defaultFilters } from '@/components/shipments/ShipmentFilters';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { 
   Dialog,
   DialogContent,
@@ -23,7 +25,9 @@ import {
   Weight,
   Truck,
   Search,
-  Send
+  Send,
+  Bell,
+  BellOff
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
@@ -37,6 +41,8 @@ export default function OpenRequests() {
   const [bidPrice, setBidPrice] = useState('');
   const [bidNotes, setBidNotes] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [filters, setFilters] = useState<ShipmentFilters>(defaultFilters);
+  const { permission, requestPermission, isSupported } = usePushNotifications();
 
   // Fetch open shipments
   const { data: shipments, isLoading } = useQuery({
@@ -142,11 +148,26 @@ export default function OpenRequests() {
     });
   };
 
-  const filteredShipments = shipments?.filter(shipment => 
-    shipment.pickup_location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    shipment.delivery_location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    shipment.equipment_type.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredShipments = shipments?.filter(shipment => {
+    // Text search
+    const matchesSearch = 
+      shipment.pickup_location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      shipment.delivery_location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      shipment.equipment_type.toLowerCase().includes(searchTerm.toLowerCase());
+
+    // Equipment type filter
+    const matchesEquipment = filters.equipmentType === 'all' || 
+      shipment.equipment_type.toLowerCase().includes(filters.equipmentType.toLowerCase());
+
+    // Weight filter
+    const matchesWeight = shipment.weight >= filters.minWeight && shipment.weight <= filters.maxWeight;
+
+    // Pickup location filter
+    const matchesLocation = !filters.pickupLocation || 
+      shipment.pickup_location.toLowerCase().includes(filters.pickupLocation.toLowerCase());
+
+    return matchesSearch && matchesEquipment && matchesWeight && matchesLocation;
+  });
 
   const hasExistingBid = (shipmentId: string) => userBids?.includes(shipmentId);
 
@@ -158,15 +179,32 @@ export default function OpenRequests() {
           <p className="text-muted-foreground">تصفح طلبات الشحن المتاحة وقدم عروضك</p>
         </div>
 
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="ابحث بالموقع أو نوع المعدات..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pr-10"
-          />
+        {/* Search and Filters */}
+        <div className="flex gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="ابحث بالموقع أو نوع المعدات..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pr-10"
+            />
+          </div>
+          <ShipmentFiltersSheet filters={filters} onFiltersChange={setFilters} />
+          {isSupported && (
+            <Button
+              variant={permission === 'granted' ? 'secondary' : 'outline'}
+              size="icon"
+              onClick={requestPermission}
+              title={permission === 'granted' ? 'الإشعارات مفعلة' : 'تفعيل الإشعارات'}
+            >
+              {permission === 'granted' ? (
+                <Bell className="h-4 w-4 text-primary" />
+              ) : (
+                <BellOff className="h-4 w-4" />
+              )}
+            </Button>
+          )}
         </div>
 
         {/* Shipments Grid */}

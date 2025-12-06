@@ -11,6 +11,9 @@ import { ar } from 'date-fns/locale';
 import ShipmentMap from '@/components/maps/ShipmentMap';
 import DriverLocationMap from '@/components/maps/DriverLocationMap';
 import { RouteInfoCard } from '@/components/shipments/RouteInfoCard';
+import { ShipmentChat } from '@/components/chat/ShipmentChat';
+import { DriverRating, RatingDisplay } from '@/components/ratings/DriverRating';
+import { useAuth } from '@/hooks/useAuth';
 import { 
   ArrowRight, 
   MapPin, 
@@ -22,16 +25,20 @@ import {
   Check,
   X,
   Loader2,
-  Truck
+  Truck,
+  MessageCircle
 } from 'lucide-react';
 
 export default function ShipmentDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [shipment, setShipment] = useState<ShipmentWithBids | null>(null);
   const [bids, setBids] = useState<Bid[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingBid, setProcessingBid] = useState<string | null>(null);
+  const [hasRated, setHasRated] = useState(false);
+  const [showChat, setShowChat] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -71,6 +78,19 @@ export default function ShipmentDetails() {
           status: bid.status as BidStatus,
           driver_profile: profileData as Profile | undefined
         });
+      }
+
+      // Check if already rated
+      if (shipmentData.status === 'completed' && shipmentData.accepted_bid_id) {
+        const acceptedBid = bidsWithProfiles.find(b => b.id === shipmentData.accepted_bid_id);
+        if (acceptedBid) {
+          const { data: ratingData } = await supabase
+            .from('ratings')
+            .select('id')
+            .eq('shipment_id', id)
+            .single();
+          setHasRated(!!ratingData);
+        }
       }
 
       setShipment({
@@ -323,6 +343,50 @@ export default function ShipmentDetails() {
                 )}
               </>
             )}
+
+            {/* Rating Section for Completed Shipments */}
+            {shipment.status === 'completed' && shipment.accepted_bid_id && !hasRated && (
+              (() => {
+                const acceptedBid = bids.find(b => b.id === shipment.accepted_bid_id);
+                if (!acceptedBid || user?.id !== shipment.factory_id) return null;
+                return (
+                  <DriverRating
+                    shipmentId={shipment.id}
+                    driverId={acceptedBid.driver_id}
+                    factoryId={shipment.factory_id}
+                    onSuccess={() => setHasRated(true)}
+                  />
+                );
+              })()
+            )}
+
+            {/* Chat Section for Accepted/In-Transit Shipments */}
+            {(shipment.status === 'bid_accepted' || shipment.status === 'in_transit') && 
+             shipment.accepted_bid_id && (
+              (() => {
+                const acceptedBid = bids.find(b => b.id === shipment.accepted_bid_id);
+                if (!acceptedBid) return null;
+                return (
+                  <div className="space-y-4">
+                    <Button 
+                      variant="outline" 
+                      className="w-full gap-2"
+                      onClick={() => setShowChat(!showChat)}
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                      {showChat ? 'إخفاء المحادثة' : 'فتح المحادثة مع السائق'}
+                    </Button>
+                    {showChat && (
+                      <ShipmentChat
+                        shipmentId={shipment.id}
+                        driverId={acceptedBid.driver_id}
+                        factoryId={shipment.factory_id}
+                      />
+                    )}
+                  </div>
+                );
+              })()
+            )}
           </div>
 
           {/* Bids Section */}
@@ -347,6 +411,7 @@ export default function ShipmentDetails() {
                           <div>
                             <p className="font-medium">{bid.driver_profile?.full_name || 'سائق'}</p>
                             <p className="text-xs text-muted-foreground">{bid.driver_profile?.company_name}</p>
+                            <RatingDisplay driverId={bid.driver_id} />
                           </div>
                         </div>
                         <StatusBadge status={bid.status} />
