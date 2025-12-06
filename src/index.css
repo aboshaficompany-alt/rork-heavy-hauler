@@ -128,4 +128,27 @@
   .gradient-warning {
     background: var(--gradient-warning);
   }
+  
+  /* Safe area for mobile devices */
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Mapbox popup styling */
+.mapboxgl-popup-content {
+  font-family: 'Cairo', sans-serif;
+  direction: rtl;
+  padding: 12px 16px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.mapboxgl-popup-close-button {
+  font-size: 18px;
+  padding: 4px 8px;
 }

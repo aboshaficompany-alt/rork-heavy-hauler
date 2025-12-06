@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { CalendarIcon, Loader2, ArrowRight } from 'lucide-react';
+import LocationPicker from '@/components/maps/LocationPicker';
 
 export default function NewShipment() {
   const navigate = useNavigate();
@@ -26,10 +27,14 @@ export default function NewShipment() {
     pickup_location: '',
     delivery_location: '',
     pickup_date: undefined as Date | undefined,
-    notes: ''
+    notes: '',
+    pickup_lat: null as number | null,
+    pickup_lng: null as number | null,
+    delivery_lat: null as number | null,
+    delivery_lng: null as number | null
   });
 
-  const handleChange = (field: string, value: string | Date | undefined) => {
+  const handleChange = (field: string, value: string | Date | number | null | undefined) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -57,7 +62,11 @@ export default function NewShipment() {
         delivery_location: formData.delivery_location,
         pickup_date: format(formData.pickup_date, 'yyyy-MM-dd'),
         notes: formData.notes || null,
-        status: 'open'
+        status: 'open',
+        pickup_lat: formData.pickup_lat,
+        pickup_lng: formData.pickup_lng,
+        delivery_lat: formData.delivery_lat,
+        delivery_lng: formData.delivery_lng
       });
 
       if (error) throw error;
@@ -122,6 +131,22 @@ export default function NewShipment() {
               onChange={(e) => handleChange('pickup_location', e.target.value)}
             />
           </div>
+
+          {/* Map Location Picker */}
+          <LocationPicker
+            pickupLat={formData.pickup_lat}
+            pickupLng={formData.pickup_lng}
+            deliveryLat={formData.delivery_lat}
+            deliveryLng={formData.delivery_lng}
+            onPickupChange={(lat, lng) => {
+              handleChange('pickup_lat', lat);
+              handleChange('pickup_lng', lng);
+            }}
+            onDeliveryChange={(lat, lng) => {
+              handleChange('delivery_lat', lat);
+              handleChange('delivery_lng', lng);
+            }}
+          />
 
           <div className="space-y-2">
             <Label htmlFor="delivery_location">موقع التسليم *</Label>
