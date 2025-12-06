@@ -1,18 +1,20 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { MobileHeader } from '@/components/layout/MobileHeader';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, MapPin, Package, Navigation, Search, Menu, X } from 'lucide-react';
+import { Loader2, Package, Search, Menu, X, Volume2, VolumeX } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import { useDriverLocation } from '@/hooks/useDriverLocation';
+import { useDriverNotifications } from '@/hooks/useDriverNotifications';
+import { useNotificationSound } from '@/hooks/useNotificationSound';
 
 interface OpenShipment {
   id: string;
@@ -28,16 +30,20 @@ interface OpenShipment {
 
 export default function DriverHome() {
   const { profile } = useAuth();
-  const [isOnline, setIsOnline] = useState(false);
+  const { isOnline, toggleOnline, currentLocation } = useDriverLocation();
   const [loading, setLoading] = useState(true);
   const [openShipments, setOpenShipments] = useState<OpenShipment[]>([]);
   const [selectedShipment, setSelectedShipment] = useState<OpenShipment | null>(null);
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [soundEnabled, setSoundEnabled] = useState(true);
   
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markers = useRef<mapboxgl.Marker[]>([]);
   const userMarker = useRef<mapboxgl.Marker | null>(null);
+  
+  // Initialize notifications
+  useDriverNotifications();
+  const { toggleSound, playSuccess } = useNotificationSound();
 
   // Initialize map
   useEffect(() => {
@@ -70,25 +76,13 @@ export default function DriverHome() {
       'top-left'
     );
 
-    // Get user location
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          setUserLocation({ lat: latitude, lng: longitude });
-          
-          if (map.current) {
-            map.current.flyTo({
-              center: [longitude, latitude],
-              zoom: 12,
-              duration: 1500
-            });
-          }
-        },
-        (error) => {
-          console.error('Error getting location:', error);
-        }
-      );
+    // Fly to current location if available
+    if (currentLocation && map.current) {
+      map.current.flyTo({
+        center: [currentLocation.lng, currentLocation.lat],
+        zoom: 12,
+        duration: 1500
+      });
     }
 
     return () => {
@@ -155,12 +149,20 @@ export default function DriverHome() {
   }, [openShipments]);
 
   const handleOnlineToggle = (checked: boolean) => {
-    setIsOnline(checked);
+    toggleOnline(checked);
     if (checked) {
+      playSuccess();
       toast.success('أنت الآن متصل ويمكنك استقبال الطلبات');
     } else {
       toast.info('تم إيقاف الاتصال');
     }
+  };
+
+  const handleSoundToggle = () => {
+    const newValue = !soundEnabled;
+    setSoundEnabled(newValue);
+    toggleSound(newValue);
+    toast.info(newValue ? 'تم تفعيل الصوت' : 'تم إيقاف الصوت');
   };
 
   return (
@@ -180,6 +182,18 @@ export default function DriverHome() {
               className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground text-sm"
             />
           </div>
+          
+          {/* Sound Toggle */}
+          <button 
+            onClick={handleSoundToggle}
+            className="w-12 h-12 bg-card/95 backdrop-blur-md rounded-full shadow-lg flex items-center justify-center"
+          >
+            {soundEnabled ? (
+              <Volume2 className="h-5 w-5 text-primary" />
+            ) : (
+              <VolumeX className="h-5 w-5 text-muted-foreground" />
+            )}
+          </button>
           
           {/* Menu Button */}
           <button className="w-12 h-12 bg-card/95 backdrop-blur-md rounded-full shadow-lg flex items-center justify-center">
