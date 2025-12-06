@@ -10,6 +10,7 @@ import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import ShipmentMap from '@/components/maps/ShipmentMap';
 import DriverLocationMap from '@/components/maps/DriverLocationMap';
+import { RouteInfoCard } from '@/components/shipments/RouteInfoCard';
 import { 
   ArrowRight, 
   MapPin, 
@@ -258,6 +259,15 @@ export default function ShipmentDetails() {
                   </div>
                 </div>
               )}
+
+              {/* Route Info - Distance & Duration */}
+              <RouteInfoCard
+                pickupLat={shipment.pickup_lat}
+                pickupLng={shipment.pickup_lng}
+                deliveryLat={shipment.delivery_lat}
+                deliveryLng={shipment.delivery_lng}
+                className="mt-6"
+              />
 
               {/* Map Section */}
               <ShipmentMap

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Package, Search, Menu, X, Volume2, VolumeX } from 'lucide-react';
+import { Loader2, Package, Search, Menu, X, Volume2, VolumeX, Navigation, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -15,6 +15,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { useDriverLocation } from '@/hooks/useDriverLocation';
 import { useDriverNotifications } from '@/hooks/useDriverNotifications';
 import { useNotificationSound } from '@/hooks/useNotificationSound';
+import { useRouteCalculation } from '@/hooks/useRouteCalculation';
 
 interface OpenShipment {
   id: string;
@@ -41,9 +42,22 @@ export default function DriverHome() {
   const markers = useRef<mapboxgl.Marker[]>([]);
   const userMarker = useRef<mapboxgl.Marker | null>(null);
   
-  // Initialize notifications
+  // Initialize notifications and route calculation
   useDriverNotifications();
   const { toggleSound, playSuccess } = useNotificationSound();
+  const { calculateRoute, routeInfo, loading: routeLoading } = useRouteCalculation();
+
+  // Calculate route when shipment is selected
+  useEffect(() => {
+    if (selectedShipment && currentLocation && selectedShipment.pickup_lat && selectedShipment.pickup_lng) {
+      calculateRoute(
+        currentLocation.lat,
+        currentLocation.lng,
+        selectedShipment.pickup_lat,
+        selectedShipment.pickup_lng
+      );
+    }
+  }, [selectedShipment, currentLocation, calculateRoute]);
 
   // Initialize map
   useEffect(() => {
@@ -264,6 +278,26 @@ export default function DriverHome() {
                     <span className="text-foreground truncate">{selectedShipment.delivery_location}</span>
                   </div>
                 </div>
+
+                {/* Route Info */}
+                {routeInfo && (
+                  <div className="flex items-center gap-4 mt-3 pt-3 border-t border-border">
+                    <div className="flex items-center gap-1.5 text-sm">
+                      <Navigation className="h-4 w-4 text-primary" />
+                      <span className="text-foreground font-medium">{routeInfo.distanceText}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-sm">
+                      <Clock className="h-4 w-4 text-warning" />
+                      <span className="text-foreground font-medium">{routeInfo.durationText}</span>
+                    </div>
+                  </div>
+                )}
+                {routeLoading && (
+                  <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="text-sm">جاري حساب المسافة...</span>
+                  </div>
+                )}
               </div>
               
               <button 

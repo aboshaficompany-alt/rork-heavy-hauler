@@ -1,1 +1,4 @@
 project_id = "vhcevvdjrmpfjldtcyep"
+
+[functions.mapbox-directions]
+verify_jwt = false
