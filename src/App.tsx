@@ -17,6 +17,7 @@ import AdminUsers from "./pages/admin/Users";
 import AdminShipments from "./pages/admin/Shipments";
 import OpenRequests from "./pages/driver/OpenRequests";
 import MyTrips from "./pages/driver/MyTrips";
+import DriverHome from "./pages/driver/DriverHome";
 import NotFound from "./pages/NotFound";
 import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
 
@@ -41,6 +42,17 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function DashboardRouter() {
+  const { role } = useAuth();
+  
+  // Redirect drivers to their map-based home page
+  if (role === 'driver') {
+    return <DriverHome />;
+  }
+  
+  return <Dashboard />;
+}
+
 function AppRoutes() {
   const { user, loading } = useAuth();
 
@@ -56,7 +68,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={user ? <Navigate to="/dashboard" replace /> : <Navigate to="/auth" replace />} />
       <Route path="/auth" element={user ? <Navigate to="/dashboard" replace /> : <Auth />} />
-      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/dashboard" element={<ProtectedRoute><DashboardRouter /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="/shipments" element={<ProtectedRoute><Shipments /></ProtectedRoute>} />
       <Route path="/shipments/new" element={<ProtectedRoute><NewShipment /></ProtectedRoute>} />
@@ -64,6 +76,7 @@ function AppRoutes() {
       <Route path="/bids" element={<ProtectedRoute><Bids /></ProtectedRoute>} />
       <Route path="/open-requests" element={<ProtectedRoute><OpenRequests /></ProtectedRoute>} />
       <Route path="/my-trips" element={<ProtectedRoute><MyTrips /></ProtectedRoute>} />
+      <Route path="/driver-home" element={<ProtectedRoute><DriverHome /></ProtectedRoute>} />
       <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
       <Route path="/admin/shipments" element={<ProtectedRoute><AdminShipments /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
