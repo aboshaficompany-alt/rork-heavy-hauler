@@ -13,8 +13,72 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
-import { CalendarIcon, Loader2, ArrowRight } from 'lucide-react';
+import { CalendarIcon, Loader2, ArrowRight, Truck } from 'lucide-react';
 import LocationPicker from '@/components/maps/LocationPicker';
+
+const vehicleTypes = [
+  { id: 'flatbed', label: 'سطحة', icon: 'flatbed' },
+  { id: 'sides', label: 'جوانب', icon: 'sides' },
+  { id: 'refrigerated', label: 'براد', icon: 'refrigerated' },
+  { id: 'lowbed', label: 'لوبد', icon: 'lowbed' },
+];
+
+// Simple truck icon component with different styles
+function TruckIcon({ type }: { type: string }) {
+  return (
+    <svg viewBox="0 0 80 40" fill="none" className="w-full h-full">
+      {type === 'flatbed' && (
+        <>
+          {/* Flatbed truck */}
+          <rect x="5" y="20" width="45" height="4" rx="1" stroke="currentColor" strokeWidth="2" fill="none" />
+          <circle cx="15" cy="30" r="6" stroke="currentColor" strokeWidth="2" fill="hsl(var(--warning))" />
+          <circle cx="25" cy="30" r="6" stroke="currentColor" strokeWidth="2" fill="hsl(var(--warning))" />
+          <circle cx="35" cy="30" r="6" stroke="currentColor" strokeWidth="2" fill="hsl(var(--warning))" />
+          <path d="M50 10 L50 24 L65 24 L70 20 L70 16 L65 10 Z" stroke="currentColor" strokeWidth="2" fill="none" />
+          <circle cx="60" cy="30" r="6" stroke="currentColor" strokeWidth="2" fill="hsl(var(--warning))" />
+          <rect x="55" y="14" width="8" height="6" rx="1" stroke="currentColor" strokeWidth="1.5" fill="none" />
+        </>
+      )}
+      {type === 'sides' && (
+        <>
+          {/* Truck with sides */}
+          <rect x="5" y="8" width="45" height="16" rx="1" stroke="currentColor" strokeWidth="2" fill="none" />
+          <line x1="15" y1="8" x2="15" y2="24" stroke="currentColor" strokeWidth="1.5" />
+          <line x1="25" y1="8" x2="25" y2="24" stroke="currentColor" strokeWidth="1.5" />
+          <line x1="35" y1="8" x2="35" y2="24" stroke="currentColor" strokeWidth="1.5" />
+          <circle cx="15" cy="30" r="6" stroke="currentColor" strokeWidth="2" fill="hsl(var(--warning))" />
+          <circle cx="35" cy="30" r="6" stroke="currentColor" strokeWidth="2" fill="hsl(var(--warning))" />
+          <path d="M50 10 L50 24 L65 24 L70 20 L70 16 L65 10 Z" stroke="currentColor" strokeWidth="2" fill="none" />
+          <circle cx="60" cy="30" r="6" stroke="currentColor" strokeWidth="2" fill="hsl(var(--warning))" />
+          <rect x="55" y="14" width="8" height="6" rx="1" stroke="currentColor" strokeWidth="1.5" fill="none" />
+        </>
+      )}
+      {type === 'refrigerated' && (
+        <>
+          {/* Refrigerated truck */}
+          <rect x="5" y="6" width="45" height="18" rx="2" stroke="currentColor" strokeWidth="2" fill="none" />
+          <circle cx="15" cy="30" r="6" stroke="currentColor" strokeWidth="2" fill="hsl(var(--warning))" />
+          <circle cx="35" cy="30" r="6" stroke="currentColor" strokeWidth="2" fill="hsl(var(--warning))" />
+          <path d="M50 10 L50 24 L65 24 L70 20 L70 16 L65 10 Z" stroke="currentColor" strokeWidth="2" fill="none" />
+          <circle cx="60" cy="30" r="6" stroke="currentColor" strokeWidth="2" fill="hsl(var(--warning))" />
+          <rect x="55" y="14" width="8" height="6" rx="1" stroke="currentColor" strokeWidth="1.5" fill="none" />
+        </>
+      )}
+      {type === 'lowbed' && (
+        <>
+          {/* Lowbed trailer */}
+          <path d="M5 22 L15 22 L20 28 L45 28 L45 22" stroke="currentColor" strokeWidth="2" fill="none" />
+          <circle cx="10" cy="30" r="5" stroke="currentColor" strokeWidth="2" fill="hsl(var(--warning))" />
+          <circle cx="20" cy="32" r="5" stroke="currentColor" strokeWidth="2" fill="hsl(var(--warning))" />
+          <circle cx="35" cy="32" r="5" stroke="currentColor" strokeWidth="2" fill="hsl(var(--warning))" />
+          <path d="M50 10 L50 24 L65 24 L70 20 L70 16 L65 10 Z" stroke="currentColor" strokeWidth="2" fill="none" />
+          <circle cx="60" cy="30" r="6" stroke="currentColor" strokeWidth="2" fill="hsl(var(--warning))" />
+          <rect x="55" y="14" width="8" height="6" rx="1" stroke="currentColor" strokeWidth="1.5" fill="none" />
+        </>
+      )}
+    </svg>
+  );
+}
 
 export default function NewShipment() {
   const navigate = useNavigate();
@@ -97,14 +161,52 @@ export default function NewShipment() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="bg-card rounded-xl p-6 border border-border space-y-6">
+          {/* Vehicle Type Selection */}
+          <div className="space-y-3">
+            <Label>نوع المركبة *</Label>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {vehicleTypes.map((type) => (
+                <button
+                  key={type.id}
+                  type="button"
+                  onClick={() => handleChange('equipment_type', type.label)}
+                  className={cn(
+                    "flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all duration-200 hover:border-primary/50",
+                    formData.equipment_type === type.label
+                      ? "border-primary bg-primary/5 shadow-sm"
+                      : "border-border bg-card hover:bg-muted/50"
+                  )}
+                >
+                  <div className={cn(
+                    "w-16 h-12 flex items-center justify-center mb-2",
+                    formData.equipment_type === type.label ? "text-primary" : "text-muted-foreground"
+                  )}>
+                    <TruckIcon type={type.icon} />
+                  </div>
+                  <span className={cn(
+                    "text-sm font-medium",
+                    formData.equipment_type === type.label ? "text-primary" : "text-foreground"
+                  )}>
+                    {type.label}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label htmlFor="equipment_type">نوع المعدّة *</Label>
+              <Label htmlFor="equipment_details">تفاصيل المعدّة</Label>
               <Input
-                id="equipment_type"
+                id="equipment_details"
                 placeholder="مثال: مولد كهربائي، ماكينة صناعية..."
-                value={formData.equipment_type}
-                onChange={(e) => handleChange('equipment_type', e.target.value)}
+                value={formData.equipment_type.includes(' - ') ? formData.equipment_type.split(' - ')[1] : ''}
+                onChange={(e) => {
+                  const vehicleType = vehicleTypes.find(t => formData.equipment_type.startsWith(t.label));
+                  if (vehicleType) {
+                    handleChange('equipment_type', e.target.value ? `${vehicleType.label} - ${e.target.value}` : vehicleType.label);
+                  }
+                }}
               />
             </div>
 
