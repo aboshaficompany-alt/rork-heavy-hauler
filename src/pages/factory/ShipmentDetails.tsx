@@ -8,6 +8,7 @@ import { ShipmentWithBids, Bid, ShipmentStatus, BidStatus, Profile } from '@/typ
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import ShipmentMap from '@/components/maps/ShipmentMap';
 import { 
   ArrowRight, 
   MapPin, 
@@ -255,6 +256,16 @@ export default function ShipmentDetails() {
                   </div>
                 </div>
               )}
+
+              {/* Map Section */}
+              <ShipmentMap
+                pickupLat={shipment.pickup_lat}
+                pickupLng={shipment.pickup_lng}
+                deliveryLat={shipment.delivery_lat}
+                deliveryLng={shipment.delivery_lng}
+                pickupLocation={shipment.pickup_location}
+                deliveryLocation={shipment.delivery_location}
+              />
             </div>
 
             {/* Status Actions */}
