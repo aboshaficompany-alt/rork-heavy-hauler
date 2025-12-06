@@ -37,7 +37,7 @@ export function MobileNav() {
     .slice(0, 5); // Show max 5 items in bottom nav
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 lg:hidden bg-background/95 backdrop-blur-md border-t border-border z-50 safe-area-bottom">
+    <nav className="fixed bottom-0 left-0 right-0 lg:hidden bg-primary z-50 safe-area-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.15)]">
       <div className="flex items-center justify-around h-16 px-2">
         {filteredNavItems.map((item) => {
           const isActive = location.pathname === item.href;
@@ -46,25 +46,27 @@ export function MobileNav() {
               key={item.href}
               to={item.href}
               className={cn(
-                "flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg transition-all duration-200 min-w-[60px]",
+                "relative flex flex-col items-center justify-center gap-1 px-3 py-2 transition-all duration-200 min-w-[60px]",
                 isActive 
-                  ? "text-primary" 
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "text-primary-foreground" 
+                  : "text-primary-foreground/60 hover:text-primary-foreground/80"
               )}
             >
-              <item.icon className={cn(
-                "h-5 w-5 transition-transform",
-                isActive && "scale-110"
-              )} />
+              <div className={cn(
+                "flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-200",
+                isActive && "bg-primary-foreground/20"
+              )}>
+                <item.icon className={cn(
+                  "h-5 w-5 transition-transform",
+                  isActive && "scale-110"
+                )} />
+              </div>
               <span className={cn(
                 "text-[10px] font-medium",
                 isActive && "font-bold"
               )}>
                 {item.label}
               </span>
-              {isActive && (
-                <div className="absolute bottom-1 w-1 h-1 rounded-full bg-primary" />
-              )}
             </Link>
           );
         })}
