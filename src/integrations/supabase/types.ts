@@ -55,6 +55,42 @@ export type Database = {
           },
         ]
       }
+      driver_locations: {
+        Row: {
+          created_at: string
+          driver_id: string
+          heading: number | null
+          id: string
+          is_online: boolean | null
+          lat: number
+          lng: number
+          speed: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          driver_id: string
+          heading?: number | null
+          id?: string
+          is_online?: boolean | null
+          lat: number
+          lng: number
+          speed?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          driver_id?: string
+          heading?: number | null
+          id?: string
+          is_online?: boolean | null
+          lat?: number
+          lng?: number
+          speed?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
