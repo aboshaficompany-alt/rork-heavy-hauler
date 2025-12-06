@@ -15,12 +15,16 @@ import ShipmentDetails from "./pages/factory/ShipmentDetails";
 import Bids from "./pages/factory/Bids";
 import AdminUsers from "./pages/admin/Users";
 import AdminShipments from "./pages/admin/Shipments";
+import OpenRequests from "./pages/driver/OpenRequests";
+import MyTrips from "./pages/driver/MyTrips";
 import NotFound from "./pages/NotFound";
+import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
 
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
+  useRealtimeNotifications();
   
   if (loading) {
     return (
@@ -58,6 +62,8 @@ function AppRoutes() {
       <Route path="/shipments/new" element={<ProtectedRoute><NewShipment /></ProtectedRoute>} />
       <Route path="/shipments/:id" element={<ProtectedRoute><ShipmentDetails /></ProtectedRoute>} />
       <Route path="/bids" element={<ProtectedRoute><Bids /></ProtectedRoute>} />
+      <Route path="/open-requests" element={<ProtectedRoute><OpenRequests /></ProtectedRoute>} />
+      <Route path="/my-trips" element={<ProtectedRoute><MyTrips /></ProtectedRoute>} />
       <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
       <Route path="/admin/shipments" element={<ProtectedRoute><AdminShipments /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
