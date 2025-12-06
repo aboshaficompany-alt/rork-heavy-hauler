@@ -16,6 +16,7 @@ import { useDriverLocation } from '@/hooks/useDriverLocation';
 import { useDriverNotifications } from '@/hooks/useDriverNotifications';
 import { useNotificationSound } from '@/hooks/useNotificationSound';
 import { useRouteCalculation } from '@/hooks/useRouteCalculation';
+import { useMapboxToken } from '@/hooks/useMapboxToken';
 
 interface OpenShipment {
   id: string;
@@ -36,11 +37,15 @@ export default function DriverHome() {
   const [openShipments, setOpenShipments] = useState<OpenShipment[]>([]);
   const [selectedShipment, setSelectedShipment] = useState<OpenShipment | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [mapReady, setMapReady] = useState(false);
   
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markers = useRef<mapboxgl.Marker[]>([]);
   const userMarker = useRef<mapboxgl.Marker | null>(null);
+  
+  // Get Mapbox token from backend
+  const { token: mapboxToken, loading: tokenLoading, error: tokenError } = useMapboxToken();
   
   // Initialize notifications and route calculation
   useDriverNotifications();
@@ -59,17 +64,17 @@ export default function DriverHome() {
     }
   }, [selectedShipment, currentLocation, calculateRoute]);
 
-  // Initialize map
+  // Initialize map when token is available
   useEffect(() => {
-    if (!mapContainer.current) return;
+    if (!mapContainer.current || !mapboxToken || tokenLoading) return;
 
-    mapboxgl.accessToken = 'pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbTk3ZXVxNWwwMjM0MmxzYWpxcHZjMG9wIn0.AQ-Ab8RN6JniiHHMdjiA_FHDnGztGzRISoBu3I__AqLzFCgbAe5RQ';
+    mapboxgl.accessToken = mapboxToken;
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/light-v11',
-      center: [46.7, 24.7], // Saudi Arabia center
-      zoom: 10,
+      center: currentLocation ? [currentLocation.lng, currentLocation.lat] : [46.7, 24.7],
+      zoom: currentLocation ? 12 : 10,
     });
 
     map.current.addControl(
@@ -90,21 +95,36 @@ export default function DriverHome() {
       'top-left'
     );
 
-    // Fly to current location if available
-    if (currentLocation && map.current) {
-      map.current.flyTo({
-        center: [currentLocation.lng, currentLocation.lat],
-        zoom: 12,
-        duration: 1500
-      });
-    }
+    map.current.on('load', () => {
+      setMapReady(true);
+    });
 
     return () => {
       markers.current.forEach(marker => marker.remove());
       userMarker.current?.remove();
       map.current?.remove();
     };
-  }, []);
+  }, [mapboxToken, tokenLoading]);
+
+  // Fly to current location when it updates
+  useEffect(() => {
+    if (currentLocation && map.current && mapReady) {
+      // Update or create user marker
+      if (userMarker.current) {
+        userMarker.current.setLngLat([currentLocation.lng, currentLocation.lat]);
+      } else {
+        const el = document.createElement('div');
+        el.innerHTML = `
+          <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center shadow-lg border-3 border-white animate-pulse">
+            <div class="w-3 h-3 bg-white rounded-full"></div>
+          </div>
+        `;
+        userMarker.current = new mapboxgl.Marker(el)
+          .setLngLat([currentLocation.lng, currentLocation.lat])
+          .addTo(map.current);
+      }
+    }
+  }, [currentLocation, mapReady]);
 
   // Fetch open shipments
   useEffect(() => {
@@ -128,39 +148,150 @@ export default function DriverHome() {
     fetchShipments();
   }, []);
 
-  // Add markers when shipments change
+  // Add markers and route when shipments change
   useEffect(() => {
-    if (!map.current || !openShipments.length) return;
+    if (!map.current || !mapReady) return;
 
     // Clear existing markers
     markers.current.forEach(marker => marker.remove());
     markers.current = [];
 
+    // Remove existing route layer and source
+    if (map.current.getLayer('shipment-route')) {
+      map.current.removeLayer('shipment-route');
+    }
+    if (map.current.getSource('shipment-route')) {
+      map.current.removeSource('shipment-route');
+    }
+
     // Add shipment markers
     openShipments.forEach((shipment) => {
+      // Pickup marker
       if (shipment.pickup_lat && shipment.pickup_lng) {
-        const el = document.createElement('div');
-        el.className = 'shipment-marker';
-        el.innerHTML = `
-          <div class="w-10 h-10 bg-primary rounded-full flex items-center justify-center shadow-lg border-2 border-white cursor-pointer transform hover:scale-110 transition-transform">
+        const pickupEl = document.createElement('div');
+        pickupEl.innerHTML = `
+          <div class="w-10 h-10 bg-success rounded-full flex items-center justify-center shadow-lg border-2 border-white cursor-pointer transform hover:scale-110 transition-transform">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
             </svg>
           </div>
         `;
         
-        el.addEventListener('click', () => {
+        pickupEl.addEventListener('click', () => {
           setSelectedShipment(shipment);
         });
 
-        const marker = new mapboxgl.Marker(el)
+        const pickupMarker = new mapboxgl.Marker(pickupEl)
           .setLngLat([shipment.pickup_lng, shipment.pickup_lat])
+          .setPopup(new mapboxgl.Popup().setHTML(`<strong>الاستلام:</strong> ${shipment.pickup_location}`))
           .addTo(map.current!);
 
-        markers.current.push(marker);
+        markers.current.push(pickupMarker);
+      }
+
+      // Delivery marker
+      if (shipment.delivery_lat && shipment.delivery_lng) {
+        const deliveryEl = document.createElement('div');
+        deliveryEl.innerHTML = `
+          <div class="w-10 h-10 bg-destructive rounded-full flex items-center justify-center shadow-lg border-2 border-white cursor-pointer transform hover:scale-110 transition-transform">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"></path>
+              <circle cx="12" cy="9" r="2.5"></circle>
+            </svg>
+          </div>
+        `;
+        
+        deliveryEl.addEventListener('click', () => {
+          setSelectedShipment(shipment);
+        });
+
+        const deliveryMarker = new mapboxgl.Marker(deliveryEl)
+          .setLngLat([shipment.delivery_lng, shipment.delivery_lat])
+          .setPopup(new mapboxgl.Popup().setHTML(`<strong>التسليم:</strong> ${shipment.delivery_location}`))
+          .addTo(map.current!);
+
+        markers.current.push(deliveryMarker);
       }
     });
-  }, [openShipments]);
+  }, [openShipments, mapReady]);
+
+  // Draw route for selected shipment
+  useEffect(() => {
+    if (!map.current || !mapReady || !selectedShipment) return;
+
+    const drawRoute = async () => {
+      if (!selectedShipment.pickup_lat || !selectedShipment.pickup_lng || 
+          !selectedShipment.delivery_lat || !selectedShipment.delivery_lng) return;
+
+      // Remove existing route
+      if (map.current!.getLayer('selected-route')) {
+        map.current!.removeLayer('selected-route');
+      }
+      if (map.current!.getSource('selected-route')) {
+        map.current!.removeSource('selected-route');
+      }
+
+      try {
+        // Fetch route from Mapbox Directions API via our edge function
+        const { data } = await supabase.functions.invoke('mapbox-directions', {
+          body: {
+            originLat: selectedShipment.pickup_lat,
+            originLng: selectedShipment.pickup_lng,
+            destLat: selectedShipment.delivery_lat,
+            destLng: selectedShipment.delivery_lng
+          }
+        });
+
+        if (data?.geometry && map.current) {
+          map.current.addSource('selected-route', {
+            type: 'geojson',
+            data: {
+              type: 'Feature',
+              properties: {},
+              geometry: data.geometry
+            }
+          });
+
+          map.current.addLayer({
+            id: 'selected-route',
+            type: 'line',
+            source: 'selected-route',
+            layout: {
+              'line-join': 'round',
+              'line-cap': 'round'
+            },
+            paint: {
+              'line-color': '#2563EB',
+              'line-width': 5,
+              'line-opacity': 0.8
+            }
+          });
+
+          // Fit bounds to show the route
+          const bounds = new mapboxgl.LngLatBounds()
+            .extend([selectedShipment.pickup_lng, selectedShipment.pickup_lat])
+            .extend([selectedShipment.delivery_lng, selectedShipment.delivery_lat]);
+
+          map.current.fitBounds(bounds, {
+            padding: { top: 150, bottom: 200, left: 50, right: 50 }
+          });
+        }
+      } catch (error) {
+        console.error('Error drawing route:', error);
+      }
+    };
+
+    drawRoute();
+
+    return () => {
+      if (map.current?.getLayer('selected-route')) {
+        map.current.removeLayer('selected-route');
+      }
+      if (map.current?.getSource('selected-route')) {
+        map.current.removeSource('selected-route');
+      }
+    };
+  }, [selectedShipment, mapReady]);
 
   const handleOnlineToggle = (checked: boolean) => {
     toggleOnline(checked);
@@ -183,6 +314,16 @@ export default function DriverHome() {
     <div className="h-screen w-screen overflow-hidden relative">
       {/* Map Container */}
       <div ref={mapContainer} className="absolute inset-0 z-0" />
+
+      {/* Token Error Message */}
+      {tokenError && (
+        <div className="absolute inset-0 z-0 bg-muted flex items-center justify-center">
+          <div className="text-center p-6">
+            <p className="text-destructive font-medium">خطأ في تحميل الخريطة</p>
+            <p className="text-muted-foreground text-sm mt-2">{tokenError}</p>
+          </div>
+        </div>
+      )}
 
       {/* Top Bar */}
       <div className="absolute top-0 left-0 right-0 z-10 p-4 safe-area-top">
@@ -349,7 +490,7 @@ export default function DriverHome() {
       <MobileNav />
 
       {/* Loading Overlay */}
-      {loading && (
+      {(loading || tokenLoading) && (
         <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-50 flex items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
