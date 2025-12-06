@@ -6,9 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Package, Search, Menu, X, Volume2, VolumeX, Navigation, Clock } from 'lucide-react';
+import { Loader2, Package, Search, Menu, X, Volume2, VolumeX, Navigation, Clock, LogOut, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -17,6 +17,13 @@ import { useDriverNotifications } from '@/hooks/useDriverNotifications';
 import { useNotificationSound } from '@/hooks/useNotificationSound';
 import { useRouteCalculation } from '@/hooks/useRouteCalculation';
 import { useMapboxToken } from '@/hooks/useMapboxToken';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface OpenShipment {
   id: string;
@@ -31,7 +38,8 @@ interface OpenShipment {
 }
 
 export default function DriverHome() {
-  const { profile } = useAuth();
+  const { profile, signOut } = useAuth();
+  const navigate = useNavigate();
   const { isOnline, toggleOnline, currentLocation } = useDriverLocation();
   const [loading, setLoading] = useState(true);
   const [openShipments, setOpenShipments] = useState<OpenShipment[]>([]);
@@ -350,10 +358,34 @@ export default function DriverHome() {
             )}
           </button>
           
-          {/* Menu Button */}
-          <button className="w-12 h-12 bg-card/95 backdrop-blur-md rounded-full shadow-lg flex items-center justify-center">
-            <Menu className="h-5 w-5 text-foreground" />
-          </button>
+          {/* Menu Button with Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="w-12 h-12 bg-card/95 backdrop-blur-md rounded-full shadow-lg flex items-center justify-center">
+                <Menu className="h-5 w-5 text-foreground" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem asChild>
+                <Link to="/settings" className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  <span>{profile?.full_name || 'الملف الشخصي'}</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={async () => {
+                  await signOut();
+                  navigate('/auth');
+                  toast.success('تم تسجيل الخروج بنجاح');
+                }}
+                className="text-destructive focus:text-destructive"
+              >
+                <LogOut className="h-4 w-4 ml-2" />
+                <span>تسجيل الخروج</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
