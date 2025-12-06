@@ -8,11 +8,13 @@ import { Loader2 } from "lucide-react";
 
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
+import Settings from "./pages/Settings";
 import Shipments from "./pages/factory/Shipments";
 import NewShipment from "./pages/factory/NewShipment";
 import ShipmentDetails from "./pages/factory/ShipmentDetails";
 import Bids from "./pages/factory/Bids";
 import AdminUsers from "./pages/admin/Users";
+import AdminShipments from "./pages/admin/Shipments";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,11 +53,13 @@ function AppRoutes() {
       <Route path="/" element={user ? <Navigate to="/dashboard" replace /> : <Navigate to="/auth" replace />} />
       <Route path="/auth" element={user ? <Navigate to="/dashboard" replace /> : <Auth />} />
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="/shipments" element={<ProtectedRoute><Shipments /></ProtectedRoute>} />
       <Route path="/shipments/new" element={<ProtectedRoute><NewShipment /></ProtectedRoute>} />
       <Route path="/shipments/:id" element={<ProtectedRoute><ShipmentDetails /></ProtectedRoute>} />
       <Route path="/bids" element={<ProtectedRoute><Bids /></ProtectedRoute>} />
       <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
+      <Route path="/admin/shipments" element={<ProtectedRoute><AdminShipments /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
