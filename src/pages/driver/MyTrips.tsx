@@ -132,12 +132,21 @@ export default function MyTrips() {
     }
   });
 
+  // Calculate earnings from completed trips
+  const completedTrips = bids?.filter(b => 
+    b.status === 'accepted' && b.shipment.status === 'completed'
+  ) || [];
+  
+  const totalEarnings = completedTrips.reduce((sum, bid) => sum + bid.price, 0);
+
   const stats = {
     total: bids?.length || 0,
     pending: bids?.filter(b => b.status === 'pending').length || 0,
     accepted: bids?.filter(b => b.status === 'accepted').length || 0,
     rejected: bids?.filter(b => b.status === 'rejected').length || 0,
     active: bids?.filter(b => b.status === 'accepted' && ['bid_accepted', 'in_transit'].includes(b.shipment.status)).length || 0,
+    completed: completedTrips.length,
+    earnings: totalEarnings,
   };
 
   const getBidStatusConfig = (status: string, shipmentStatus?: string) => {
@@ -194,6 +203,27 @@ export default function MyTrips() {
           <h1 className="text-2xl font-bold text-foreground">رحلاتي</h1>
           <p className="text-muted-foreground mt-1">متابعة عروضك ورحلاتك النشطة</p>
         </div>
+
+        {/* Earnings Card */}
+        <Card className="bg-gradient-to-br from-success/20 via-success/10 to-transparent border-success/30">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">إجمالي الأرباح</p>
+                <div className="flex items-baseline gap-2 mt-1">
+                  <span className="text-4xl font-bold text-success">{stats.earnings.toLocaleString()}</span>
+                  <span className="text-lg text-success/70">ريال</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  من {stats.completed} رحلة مكتملة
+                </p>
+              </div>
+              <div className="p-4 rounded-full bg-success/20">
+                <DollarSign className="h-10 w-10 text-success" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
