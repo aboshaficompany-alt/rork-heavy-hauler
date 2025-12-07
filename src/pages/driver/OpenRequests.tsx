@@ -11,6 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { ShipmentFiltersSheet, ShipmentFilters, defaultFilters } from '@/components/shipments/ShipmentFilters';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { useActiveShipmentCheck } from '@/hooks/useActiveShipmentCheck';
+import { useNavigate } from 'react-router-dom';
 import { 
   Dialog,
   DialogContent,
@@ -27,7 +29,8 @@ import {
   Search,
   Send,
   Bell,
-  BellOff
+  BellOff,
+  AlertTriangle
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
@@ -36,6 +39,7 @@ export default function OpenRequests() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedShipment, setSelectedShipment] = useState<string | null>(null);
   const [bidPrice, setBidPrice] = useState('');
@@ -43,6 +47,7 @@ export default function OpenRequests() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [filters, setFilters] = useState<ShipmentFilters>(defaultFilters);
   const { permission, requestPermission, isSupported } = usePushNotifications();
+  const { hasActiveShipment, activeShipment } = useActiveShipmentCheck();
 
   // Fetch open shipments
   const { data: shipments, isLoading } = useQuery({
@@ -207,7 +212,29 @@ export default function OpenRequests() {
           )}
         </div>
 
-        {/* Shipments Grid */}
+        {/* Active Shipment Warning */}
+        {hasActiveShipment && activeShipment && (
+          <Card className="border-warning bg-warning/10">
+            <CardContent className="py-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 text-warning mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-medium text-warning">لديك شحنة نشطة</p>
+                  <p className="text-sm text-muted-foreground">
+                    لا يمكنك تقديم عروض جديدة حتى إكمال الشحنة الحالية: {activeShipment.equipment_type}
+                  </p>
+                </div>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => navigate(`/driver/shipment/${activeShipment.id}`)}
+                >
+                  عرض الشحنة
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
         {isLoading ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {[1, 2, 3].map((i) => (
@@ -282,10 +309,15 @@ export default function OpenRequests() {
                     <DialogTrigger asChild>
                       <Button 
                         className="w-full"
-                        disabled={hasExistingBid(shipment.id)}
+                        disabled={hasExistingBid(shipment.id) || hasActiveShipment}
                         onClick={() => setSelectedShipment(shipment.id)}
                       >
-                        {hasExistingBid(shipment.id) ? (
+                        {hasActiveShipment ? (
+                          <>
+                            <AlertTriangle className="h-4 w-4 ml-2" />
+                            لديك شحنة نشطة
+                          </>
+                        ) : hasExistingBid(shipment.id) ? (
                           'تم تقديم عرض'
                         ) : (
                           <>
