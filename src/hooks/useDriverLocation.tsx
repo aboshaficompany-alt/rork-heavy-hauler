@@ -95,16 +95,16 @@ export function useDriverLocation() {
       {
         enableHighAccuracy: true,
         timeout: 15000,
-        maximumAge: 5000
+        maximumAge: 3000 // More frequent updates
       }
     );
 
-    // Update DB every 10 seconds
+    // Update DB every 5 seconds for smoother tracking
     updateIntervalRef.current = setInterval(() => {
       if (currentLocation && isOnline) {
         updateLocationInDB(currentLocation, isOnline);
       }
-    }, 10000);
+    }, 5000);
   }, [currentLocation, isOnline, updateLocationInDB, isGeolocationAvailable]);
 
   // Stop tracking
