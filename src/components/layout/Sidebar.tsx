@@ -8,7 +8,8 @@ import {
   Settings,
   LogOut,
   Menu,
-  X
+  X,
+  BarChart3
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -28,6 +29,7 @@ const navItems: NavItem[] = [
   { label: 'العروض', href: '/bids', icon: FileText, roles: ['factory'] },
   { label: 'الطلبات المفتوحة', href: '/open-requests', icon: Truck, roles: ['driver'] },
   { label: 'رحلاتي', href: '/my-trips', icon: Truck, roles: ['driver'] },
+  { label: 'الإحصائيات', href: '/driver/stats', icon: BarChart3, roles: ['driver'] },
   { label: 'المستخدمين', href: '/admin/users', icon: Users, roles: ['admin'] },
   { label: 'جميع الشحنات', href: '/admin/shipments', icon: Package, roles: ['admin'] },
   { label: 'الإعدادات', href: '/settings', icon: Settings, roles: ['admin', 'factory', 'driver'] },
