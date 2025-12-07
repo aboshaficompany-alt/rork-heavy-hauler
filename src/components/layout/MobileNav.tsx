@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Package, 
@@ -6,10 +6,12 @@ import {
   Truck, 
   Settings,
   Users,
-  BarChart3
+  BarChart3,
+  LogOut
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface NavItem {
   label: string;
@@ -31,12 +33,19 @@ const navItems: NavItem[] = [
 ];
 
 export function MobileNav() {
-  const { role } = useAuth();
+  const { role, signOut } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth');
+    toast.success('تم تسجيل الخروج بنجاح');
+  };
 
   const filteredNavItems = navItems
     .filter(item => role && item.roles.includes(role))
-    .slice(0, 5); // Show max 5 items in bottom nav
+    .slice(0, 4); // Show max 4 items + logout
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 lg:hidden bg-primary z-50 safe-area-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.15)]">
@@ -72,6 +81,15 @@ export function MobileNav() {
             </Link>
           );
         })}
+        <button
+          onClick={handleSignOut}
+          className="relative flex flex-col items-center justify-center gap-1 px-3 py-2 transition-all duration-200 min-w-[60px] text-primary-foreground/60 hover:text-primary-foreground/80"
+        >
+          <div className="flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-200">
+            <LogOut className="h-5 w-5 transition-transform" />
+          </div>
+          <span className="text-[10px] font-medium">خروج</span>
+        </button>
       </div>
     </nav>
   );

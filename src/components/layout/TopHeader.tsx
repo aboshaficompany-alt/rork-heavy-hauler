@@ -29,7 +29,7 @@ export function TopHeader() {
           onClick={handleSignOut}
           className="text-muted-foreground hover:text-destructive"
         >
-          <LogOut className="h-4 w-4 ml-2" />
+          <LogOut className="h-4 w-4 sm:ml-2" />
           <span className="hidden sm:inline">تسجيل الخروج</span>
         </Button>
       </div>
