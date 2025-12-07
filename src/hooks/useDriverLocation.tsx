@@ -10,12 +10,6 @@ interface LocationState {
   speed?: number;
 }
 
-// Default location (Riyadh, Saudi Arabia)
-const DEFAULT_LOCATION: LocationState = {
-  lat: 24.7136,
-  lng: 46.6753
-};
-
 export function useDriverLocation() {
   const { user, role } = useAuth();
   const [isOnline, setIsOnline] = useState(false);
@@ -58,10 +52,9 @@ export function useDriverLocation() {
   // Start tracking location
   const startTracking = useCallback(() => {
     if (!isGeolocationAvailable) {
-      setLocationError('الموقع الجغرافي غير متاح في هذا المتصفح');
-      // Use default location
-      setCurrentLocation(DEFAULT_LOCATION);
-      toast.info('تم استخدام موقع افتراضي (الرياض)');
+      const errorMsg = 'الموقع الجغرافي غير متاح في هذا المتصفح';
+      setLocationError(errorMsg);
+      toast.error(errorMsg);
       return;
     }
 
@@ -89,20 +82,15 @@ export function useDriverLocation() {
             errorMessage = 'يرجى السماح بالوصول للموقع من إعدادات المتصفح';
             break;
           case error.POSITION_UNAVAILABLE:
-            errorMessage = 'الموقع غير متاح حالياً';
+            errorMessage = 'الموقع غير متاح حالياً - تأكد من تفعيل GPS';
             break;
           case error.TIMEOUT:
-            errorMessage = 'انتهت مهلة تحديد الموقع';
+            errorMessage = 'انتهت مهلة تحديد الموقع - حاول مرة أخرى';
             break;
         }
         
         setLocationError(errorMessage);
-        
-        // Use default location as fallback
-        if (!currentLocation) {
-          setCurrentLocation(DEFAULT_LOCATION);
-          toast.info('تم استخدام موقع افتراضي (الرياض)');
-        }
+        toast.error(errorMessage);
       },
       {
         enableHighAccuracy: true,
@@ -160,32 +148,83 @@ export function useDriverLocation() {
 
   // Initial location fetch
   useEffect(() => {
-    if (role === 'driver') {
-      if (isGeolocationAvailable) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            setCurrentLocation({
-              lat: position.coords.latitude,
-              lng: position.coords.longitude
-            });
-          },
-          (error) => {
-            console.warn('Initial location error:', error.message);
-            // Use default location
-            setCurrentLocation(DEFAULT_LOCATION);
-          },
-          {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 60000
+    if (role === 'driver' && isGeolocationAvailable) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setCurrentLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+        },
+        (error) => {
+          console.warn('Initial location error:', error.message);
+          let errorMessage = 'تعذر تحديد موقعك';
+          
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage = 'يرجى السماح بالوصول للموقع';
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage = 'الموقع غير متاح - فعّل GPS';
+              break;
+            case error.TIMEOUT:
+              errorMessage = 'انتهت مهلة تحديد الموقع';
+              break;
           }
-        );
-      } else {
-        // Use default location if geolocation not available
-        setCurrentLocation(DEFAULT_LOCATION);
-      }
+          
+          setLocationError(errorMessage);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 60000
+        }
+      );
     }
   }, [role, isGeolocationAvailable]);
+
+  // Retry getting location
+  const retryLocation = useCallback(() => {
+    if (!isGeolocationAvailable) {
+      toast.error('الموقع الجغرافي غير مدعوم');
+      return;
+    }
+
+    setLocationError(null);
+    toast.info('جاري تحديد الموقع...');
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setCurrentLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        });
+        setLocationError(null);
+        toast.success('تم تحديد الموقع بنجاح');
+      },
+      (error) => {
+        let errorMessage = 'تعذر تحديد الموقع';
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = 'يرجى السماح بالوصول للموقع من إعدادات المتصفح';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = 'الموقع غير متاح - تأكد من تفعيل GPS';
+            break;
+          case error.TIMEOUT:
+            errorMessage = 'انتهت المهلة - حاول مرة أخرى';
+            break;
+        }
+        setLocationError(errorMessage);
+        toast.error(errorMessage);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0
+      }
+    );
+  }, [isGeolocationAvailable]);
 
   return {
     isOnline,
@@ -193,6 +232,7 @@ export function useDriverLocation() {
     currentLocation,
     isTracking,
     locationError,
-    isGeolocationAvailable
+    isGeolocationAvailable,
+    retryLocation
   };
 }
