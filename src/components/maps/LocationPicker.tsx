@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { MapPin, AlertCircle, Navigation, Truck } from 'lucide-react';
+import { MapPin, Navigation, Truck, Crosshair, Loader2, AlertCircle } from 'lucide-react';
+import { useMapboxToken } from '@/hooks/useMapboxToken';
+import { useGPSLocation } from '@/hooks/useGPSLocation';
 
 interface LocationPickerProps {
   pickupLat?: number | null;
@@ -30,20 +30,9 @@ const LocationPicker = ({
   const pickupMarker = useRef<mapboxgl.Marker | null>(null);
   const deliveryMarker = useRef<mapboxgl.Marker | null>(null);
   
-  const [mapboxToken, setMapboxToken] = useState(() => 
-    localStorage.getItem('mapbox_token') || ''
-  );
-  const [showTokenInput, setShowTokenInput] = useState(!mapboxToken);
-  const [mapError, setMapError] = useState<string | null>(null);
+  const { token: mapboxToken, loading: tokenLoading, error: tokenError } = useMapboxToken();
+  const { getCurrentLocation, loading: gpsLoading } = useGPSLocation();
   const [activeMarker, setActiveMarker] = useState<MarkerType>('pickup');
-
-  const saveToken = () => {
-    if (mapboxToken.trim()) {
-      localStorage.setItem('mapbox_token', mapboxToken.trim());
-      setShowTokenInput(false);
-      setMapError(null);
-    }
-  };
 
   const createMarkerElement = (type: MarkerType) => {
     const el = document.createElement('div');
@@ -72,8 +61,34 @@ const LocationPicker = ({
     return el;
   };
 
+  // Handle GPS location for active marker
+  const handleGetGPSLocation = async () => {
+    const location = await getCurrentLocation();
+    if (location) {
+      if (activeMarker === 'pickup') {
+        onPickupChange(location.lat, location.lng);
+        if (map.current) {
+          map.current.flyTo({
+            center: [location.lng, location.lat],
+            zoom: 14,
+            duration: 1000
+          });
+        }
+      } else {
+        onDeliveryChange(location.lat, location.lng);
+        if (map.current) {
+          map.current.flyTo({
+            center: [location.lng, location.lat],
+            zoom: 14,
+            duration: 1000
+          });
+        }
+      }
+    }
+  };
+
   useEffect(() => {
-    if (!mapContainer.current || showTokenInput || !mapboxToken) return;
+    if (!mapContainer.current || !mapboxToken || tokenLoading) return;
 
     try {
       mapboxgl.accessToken = mapboxToken;
@@ -96,16 +111,13 @@ const LocationPicker = ({
         positionOptions: {
           enableHighAccuracy: true
         },
-        trackUserLocation: false,
-        showUserHeading: false
+        trackUserLocation: true,
+        showUserHeading: true
       });
       map.current.addControl(geolocate, 'top-left');
 
       map.current.on('error', (e) => {
         console.error('Mapbox error:', e);
-        setMapError('خطأ في تحميل الخريطة. تحقق من صحة المفتاح.');
-        setShowTokenInput(true);
-        localStorage.removeItem('mapbox_token');
       });
 
       // Add logo overlay
@@ -230,13 +242,12 @@ const LocationPicker = ({
 
     } catch (error) {
       console.error('Map initialization error:', error);
-      setMapError('خطأ في تهيئة الخريطة');
     }
 
     return () => {
       map.current?.remove();
     };
-  }, [showTokenInput, mapboxToken]);
+  }, [mapboxToken, tokenLoading]);
 
   // Update markers when coordinates change externally
   useEffect(() => {
@@ -251,48 +262,25 @@ const LocationPicker = ({
     }
   }, [deliveryLat, deliveryLng]);
 
-  if (showTokenInput) {
+  // Loading state
+  if (tokenLoading) {
     return (
       <div className="bg-card rounded-xl p-6 border border-border">
-        <div className="flex items-center gap-2 mb-4">
-          <MapPin className="h-5 w-5 text-primary" />
-          <h3 className="font-bold">إعداد الخريطة</h3>
+        <div className="flex items-center justify-center gap-2 py-8">
+          <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          <span className="text-muted-foreground">جاري تحميل الخريطة...</span>
         </div>
-        
-        {mapError && (
-          <div className="flex items-center gap-2 text-destructive mb-4 p-3 bg-destructive/10 rounded-lg">
-            <AlertCircle className="h-4 w-4" />
-            <span className="text-sm">{mapError}</span>
-          </div>
-        )}
+      </div>
+    );
+  }
 
-        <p className="text-sm text-muted-foreground mb-4">
-          لتحديد المواقع على الخريطة، أدخل مفتاح Mapbox العام. يمكنك الحصول عليه من{' '}
-          <a 
-            href="https://mapbox.com" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-primary hover:underline"
-          >
-            mapbox.com
-          </a>
-        </p>
-
-        <div className="space-y-3">
-          <div>
-            <Label htmlFor="mapbox-token">Mapbox Public Token</Label>
-            <Input
-              id="mapbox-token"
-              type="text"
-              placeholder="pk.eyJ1..."
-              value={mapboxToken}
-              onChange={(e) => setMapboxToken(e.target.value)}
-              dir="ltr"
-            />
-          </div>
-          <Button onClick={saveToken} disabled={!mapboxToken.trim()}>
-            حفظ وعرض الخريطة
-          </Button>
+  // Error state
+  if (tokenError) {
+    return (
+      <div className="bg-card rounded-xl p-6 border border-border">
+        <div className="flex items-center gap-2 text-destructive p-3 bg-destructive/10 rounded-lg">
+          <AlertCircle className="h-4 w-4" />
+          <span className="text-sm">{tokenError}</span>
         </div>
       </div>
     );
@@ -305,6 +293,23 @@ const LocationPicker = ({
           <MapPin className="h-5 w-5 text-primary" />
           <h3 className="font-bold">تحديد المواقع على الخريطة</h3>
         </div>
+        
+        {/* GPS Button */}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleGetGPSLocation}
+          disabled={gpsLoading}
+          className="gap-2"
+        >
+          {gpsLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Crosshair className="h-4 w-4" />
+          )}
+          موقعي الحالي
+        </Button>
       </div>
 
       {/* Marker selection buttons */}
@@ -334,7 +339,7 @@ const LocationPicker = ({
       </div>
 
       <p className="text-xs text-muted-foreground">
-        انقر على الخريطة لتحديد {activeMarker === 'pickup' ? 'موقع الاستلام' : 'موقع التسليم'}، أو اسحب العلامة لتعديل الموقع
+        انقر على الخريطة لتحديد {activeMarker === 'pickup' ? 'موقع الاستلام' : 'موقع التسليم'}، أو اضغط "موقعي الحالي" لاستخدام GPS
       </p>
 
       <div ref={mapContainer} className="h-72 rounded-lg overflow-hidden relative" />
