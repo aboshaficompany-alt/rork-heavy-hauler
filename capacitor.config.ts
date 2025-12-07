@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.287ebe9847d549c0b0be9d67d48758fd',
+  appId: 'app.lovable.rorkheavyhauler',
   appName: 'rork-heavy-hauler',
   webDir: 'dist',
   server: {
