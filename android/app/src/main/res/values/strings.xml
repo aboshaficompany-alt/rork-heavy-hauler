@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">rork-heavy-hauler</string>
+    <string name="title_activity_main">rork-heavy-hauler</string>
+    <string name="package_name">com.amas.logistics</string>
+    <string name="custom_url_scheme">com.amas.logistics</string>
+</resources>
