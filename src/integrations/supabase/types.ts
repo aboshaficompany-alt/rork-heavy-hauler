@@ -358,6 +358,10 @@ export type Database = {
         Args: { _driver_id: string; _shipment_id: string }
         Returns: boolean
       }
+      factory_owns_shipment: {
+        Args: { _factory_id: string; _shipment_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
