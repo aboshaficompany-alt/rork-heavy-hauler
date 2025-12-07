@@ -350,6 +350,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      driver_has_accepted_bid_on_shipment: {
+        Args: { _driver_id: string; _shipment_id: string }
+        Returns: boolean
+      }
+      driver_has_bid_on_shipment: {
+        Args: { _driver_id: string; _shipment_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
