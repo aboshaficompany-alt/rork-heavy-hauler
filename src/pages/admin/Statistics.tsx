@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuth } from '@/hooks/useAuth';
 import { 
   TrendingUp, 
   TrendingDown,
@@ -11,8 +10,9 @@ import {
   Truck,
   Calendar,
   CheckCircle2,
-  Clock,
-  XCircle,
+  Users,
+  Factory,
+  Package,
   BarChart3,
   PieChart
 } from 'lucide-react';
@@ -29,11 +29,8 @@ import {
   PieChart as RechartsPieChart,
   Pie,
   Cell,
-  Legend,
-  LineChart,
-  Line,
-  Area,
-  AreaChart
+  AreaChart,
+  Area
 } from 'recharts';
 
 type BidWithShipment = {
@@ -41,22 +38,23 @@ type BidWithShipment = {
   price: number;
   status: 'pending' | 'accepted' | 'rejected';
   created_at: string;
+  driver_id: string;
   shipment: {
     id: string;
     equipment_type: string;
     status: string;
     pickup_date: string;
+    factory_id: string;
   };
 };
 
-export default function DriverStats() {
-  const { user } = useAuth();
+export default function AdminStatistics() {
   const [selectedPeriod, setSelectedPeriod] = useState<'6months' | '12months'>('6months');
 
-  const { data: bids, isLoading } = useQuery({
-    queryKey: ['driver-stats', user?.id],
+  // Fetch all bids
+  const { data: bids, isLoading: bidsLoading } = useQuery({
+    queryKey: ['admin-bids-stats'],
     queryFn: async () => {
-      if (!user?.id) return [];
       const { data, error } = await supabase
         .from('bids')
         .select(`
@@ -64,20 +62,38 @@ export default function DriverStats() {
           price,
           status,
           created_at,
+          driver_id,
           shipment:shipments(
             id,
             equipment_type,
             status,
-            pickup_date
+            pickup_date,
+            factory_id
           )
         `)
-        .eq('driver_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       return data as unknown as BidWithShipment[];
     },
-    enabled: !!user?.id,
+  });
+
+  // Fetch users count
+  const { data: usersData } = useQuery({
+    queryKey: ['admin-users-stats'],
+    queryFn: async () => {
+      const { data: profiles } = await supabase.from('profiles').select('id');
+      const { data: roles } = await supabase.from('user_roles').select('role');
+      
+      const drivers = roles?.filter(r => r.role === 'driver').length || 0;
+      const factories = roles?.filter(r => r.role === 'factory').length || 0;
+      
+      return {
+        total: profiles?.length || 0,
+        drivers,
+        factories
+      };
+    },
   });
 
   // Calculate monthly data
@@ -150,7 +166,6 @@ export default function DriverStats() {
       completedTrips: 0,
       totalBids: 0,
       acceptanceRate: 0,
-      avgEarningsPerTrip: 0,
       thisMonthEarnings: 0,
       lastMonthEarnings: 0,
       earningsGrowth: 0,
@@ -193,7 +208,6 @@ export default function DriverStats() {
       completedTrips: completed.length,
       totalBids: bids.length,
       acceptanceRate,
-      avgEarningsPerTrip: completed.length > 0 ? Math.round(totalEarnings / completed.length) : 0,
       thisMonthEarnings,
       lastMonthEarnings,
       earningsGrowth,
@@ -218,7 +232,7 @@ export default function DriverStats() {
     return null;
   };
 
-  if (isLoading) {
+  if (bidsLoading) {
     return (
       <DashboardLayout>
         <div className="space-y-6 animate-pulse">
@@ -239,13 +253,13 @@ export default function DriverStats() {
       <div className="space-y-6 animate-fade-in">
         {/* Header */}
         <div className="bg-gradient-to-l from-primary/5 to-transparent rounded-2xl p-6">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
               <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
                 <BarChart3 className="h-7 w-7 text-primary" />
-                الإحصائيات
+                إحصائيات المنصة
               </h1>
-              <p className="text-muted-foreground mt-1">تحليل أداءك وأرباحك</p>
+              <p className="text-muted-foreground mt-1">تحليل شامل لأداء المنصة</p>
             </div>
             <div className="flex gap-2">
               <button
@@ -272,32 +286,40 @@ export default function DriverStats() {
           </div>
         </div>
 
-        {/* Main Stats Cards */}
+        {/* Users Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="bg-gradient-to-br from-success/20 via-success/10 to-transparent border-success/30">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground">إجمالي الأرباح</p>
-                  <p className="text-2xl font-bold text-success mt-1">
-                    {stats.totalEarnings.toLocaleString()}
-                  </p>
-                  <p className="text-xs text-success/70">ريال</p>
-                </div>
-                <DollarSign className="h-8 w-8 text-success/40" />
-              </div>
-            </CardContent>
-          </Card>
-
           <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-muted-foreground">الرحلات المكتملة</p>
-                  <p className="text-2xl font-bold text-primary mt-1">{stats.completedTrips}</p>
-                  <p className="text-xs text-muted-foreground">رحلة</p>
+                  <p className="text-xs text-muted-foreground">إجمالي المستخدمين</p>
+                  <p className="text-2xl font-bold text-primary mt-1">{usersData?.total || 0}</p>
                 </div>
-                <Truck className="h-8 w-8 text-primary/40" />
+                <Users className="h-8 w-8 text-primary/40" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-success/10 to-success/5 border-success/20">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground">السائقون</p>
+                  <p className="text-2xl font-bold text-success mt-1">{usersData?.drivers || 0}</p>
+                </div>
+                <Truck className="h-8 w-8 text-success/40" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-warning/10 to-warning/5 border-warning/20">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground">المنشآت</p>
+                  <p className="text-2xl font-bold text-warning mt-1">{usersData?.factories || 0}</p>
+                </div>
+                <Factory className="h-8 w-8 text-warning/40" />
               </div>
             </CardContent>
           </Card>
@@ -306,72 +328,71 @@ export default function DriverStats() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-muted-foreground">معدل القبول</p>
-                  <p className="text-2xl font-bold text-foreground mt-1">{stats.acceptanceRate}%</p>
-                  <p className="text-xs text-muted-foreground">من العروض</p>
+                  <p className="text-xs text-muted-foreground">الرحلات المكتملة</p>
+                  <p className="text-2xl font-bold text-foreground mt-1">{stats.completedTrips}</p>
                 </div>
                 <CheckCircle2 className="h-8 w-8 text-muted-foreground/40" />
               </div>
             </CardContent>
           </Card>
+        </div>
 
-          <Card className="border-border">
-            <CardContent className="p-4">
+        {/* Revenue Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="bg-gradient-to-br from-success/20 via-success/10 to-transparent border-success/30">
+            <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-muted-foreground">متوسط الربح</p>
-                  <p className="text-2xl font-bold text-foreground mt-1">
-                    {stats.avgEarningsPerTrip.toLocaleString()}
+                  <p className="text-sm text-muted-foreground">إجمالي الإيرادات</p>
+                  <p className="text-3xl font-bold text-success mt-1">
+                    {stats.totalEarnings.toLocaleString()}
                   </p>
-                  <p className="text-xs text-muted-foreground">ريال/رحلة</p>
+                  <p className="text-sm text-success/70">ريال</p>
                 </div>
-                <TrendingUp className="h-8 w-8 text-muted-foreground/40" />
+                <DollarSign className="h-10 w-10 text-success/40" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">هذا الشهر</p>
+                  <p className="text-3xl font-bold text-foreground mt-1">
+                    {stats.thisMonthEarnings.toLocaleString()}
+                  </p>
+                  <p className="text-sm text-muted-foreground">ريال</p>
+                </div>
+                <Calendar className="h-10 w-10 text-muted-foreground/40" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">نسبة النمو</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    {stats.earningsGrowth >= 0 ? (
+                      <>
+                        <TrendingUp className="h-6 w-6 text-success" />
+                        <span className="text-3xl font-bold text-success">+{stats.earningsGrowth}%</span>
+                      </>
+                    ) : (
+                      <>
+                        <TrendingDown className="h-6 w-6 text-destructive" />
+                        <span className="text-3xl font-bold text-destructive">{stats.earningsGrowth}%</span>
+                      </>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground">مقارنة بالشهر السابق</p>
+                </div>
               </div>
             </CardContent>
           </Card>
         </div>
-
-        {/* Monthly Comparison */}
-        <Card className="overflow-hidden">
-          <CardHeader className="border-b border-border bg-muted/30">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-primary" />
-                مقارنة شهرية
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                {stats.earningsGrowth >= 0 ? (
-                  <div className="flex items-center gap-1 text-success text-sm">
-                    <TrendingUp className="h-4 w-4" />
-                    <span>+{stats.earningsGrowth}%</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-1 text-destructive text-sm">
-                    <TrendingDown className="h-4 w-4" />
-                    <span>{stats.earningsGrowth}%</span>
-                  </div>
-                )}
-                <span className="text-xs text-muted-foreground">مقارنة بالشهر السابق</span>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="p-4">
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="p-4 rounded-xl bg-success/10 border border-success/20">
-                <p className="text-sm text-muted-foreground">هذا الشهر</p>
-                <p className="text-2xl font-bold text-success">
-                  {stats.thisMonthEarnings.toLocaleString()} ريال
-                </p>
-              </div>
-              <div className="p-4 rounded-xl bg-muted/50 border border-border">
-                <p className="text-sm text-muted-foreground">الشهر السابق</p>
-                <p className="text-2xl font-bold text-foreground">
-                  {stats.lastMonthEarnings.toLocaleString()} ريال
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Charts Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -380,7 +401,7 @@ export default function DriverStats() {
             <CardHeader className="border-b border-border bg-muted/30">
               <CardTitle className="text-lg flex items-center gap-2">
                 <DollarSign className="h-5 w-5 text-success" />
-                الأرباح الشهرية
+                الإيرادات الشهرية
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4">
@@ -407,7 +428,7 @@ export default function DriverStats() {
                     <Area
                       type="monotone"
                       dataKey="earnings"
-                      name="الأرباح"
+                      name="الإيرادات"
                       stroke="hsl(var(--success))"
                       strokeWidth={2}
                       fill="url(#earningsGradient)"
@@ -453,12 +474,12 @@ export default function DriverStats() {
             </CardContent>
           </Card>
 
-          {/* Bid Status Distribution */}
-          <Card>
+          {/* Equipment Distribution */}
+          <Card className="lg:col-span-2">
             <CardHeader className="border-b border-border bg-muted/30">
               <CardTitle className="text-lg flex items-center gap-2">
                 <PieChart className="h-5 w-5 text-primary" />
-                توزيع حالة العروض
+                توزيع أنواع المعدات
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4">
@@ -466,116 +487,26 @@ export default function DriverStats() {
                 <ResponsiveContainer width="100%" height="100%">
                   <RechartsPieChart>
                     <Pie
-                      data={[
-                        { name: 'مقبولة', value: bids?.filter(b => b.status === 'accepted').length || 0 },
-                        { name: 'مرفوضة', value: bids?.filter(b => b.status === 'rejected').length || 0 },
-                        { name: 'قيد المراجعة', value: bids?.filter(b => b.status === 'pending').length || 0 },
-                      ].filter(d => d.value > 0)}
+                      data={equipmentData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={50}
+                      labelLine={false}
+                      label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
                       outerRadius={80}
-                      paddingAngle={5}
+                      fill="#8884d8"
                       dataKey="value"
                     >
-                      {[
-                        { name: 'مقبولة', value: bids?.filter(b => b.status === 'accepted').length || 0 },
-                        { name: 'مرفوضة', value: bids?.filter(b => b.status === 'rejected').length || 0 },
-                        { name: 'قيد المراجعة', value: bids?.filter(b => b.status === 'pending').length || 0 },
-                      ].filter(d => d.value > 0).map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={['hsl(var(--success))', 'hsl(var(--destructive))', 'hsl(var(--warning))'][index]} />
+                      {equipmentData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
                     <Tooltip />
-                    <Legend />
                   </RechartsPieChart>
                 </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
-
-          {/* Equipment Type Distribution */}
-          <Card>
-            <CardHeader className="border-b border-border bg-muted/30">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Truck className="h-5 w-5 text-primary" />
-                توزيع أنواع المعدات
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4">
-              {equipmentData.length > 0 ? (
-                <div className="space-y-4">
-                  {equipmentData.map((item, index) => (
-                    <div key={item.name} className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-foreground">{item.name}</span>
-                        <span className="text-sm text-muted-foreground">
-                          {item.value} رحلة • {item.earnings.toLocaleString()} ريال
-                        </span>
-                      </div>
-                      <div className="h-2 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all"
-                          style={{
-                            width: `${(item.value / Math.max(...equipmentData.map(d => d.value))) * 100}%`,
-                            backgroundColor: COLORS[index % COLORS.length],
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="h-64 flex items-center justify-center text-muted-foreground">
-                  لا توجد بيانات كافية
-                </div>
-              )}
-            </CardContent>
-          </Card>
         </div>
-
-        {/* Monthly Details Table */}
-        <Card>
-          <CardHeader className="border-b border-border bg-muted/30">
-            <CardTitle className="text-lg">تفاصيل الأشهر</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-border bg-muted/30">
-                    <th className="text-right p-4 text-sm font-medium text-muted-foreground">الشهر</th>
-                    <th className="text-center p-4 text-sm font-medium text-muted-foreground">العروض</th>
-                    <th className="text-center p-4 text-sm font-medium text-muted-foreground">مقبولة</th>
-                    <th className="text-center p-4 text-sm font-medium text-muted-foreground">مرفوضة</th>
-                    <th className="text-center p-4 text-sm font-medium text-muted-foreground">الرحلات</th>
-                    <th className="text-left p-4 text-sm font-medium text-muted-foreground">الأرباح</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {monthlyData.map((month, index) => (
-                    <tr key={index} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                      <td className="p-4 text-sm font-medium text-foreground">{month.fullMonth}</td>
-                      <td className="p-4 text-center text-sm text-muted-foreground">{month.bids}</td>
-                      <td className="p-4 text-center">
-                        <span className="text-sm text-success font-medium">{month.accepted}</span>
-                      </td>
-                      <td className="p-4 text-center">
-                        <span className="text-sm text-destructive font-medium">{month.rejected}</span>
-                      </td>
-                      <td className="p-4 text-center">
-                        <span className="text-sm text-primary font-bold">{month.trips}</span>
-                      </td>
-                      <td className="p-4 text-left">
-                        <span className="text-sm text-success font-bold">{month.earnings.toLocaleString()} ريال</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </DashboardLayout>
   );
