@@ -126,6 +126,39 @@ export type Database = {
         }
         Relationships: []
       }
+      driver_vehicles: {
+        Row: {
+          created_at: string
+          driver_id: string
+          id: string
+          plate_number: string
+          updated_at: string
+          vehicle_model: string | null
+          vehicle_type: string
+          vehicle_year: number | null
+        }
+        Insert: {
+          created_at?: string
+          driver_id: string
+          id?: string
+          plate_number: string
+          updated_at?: string
+          vehicle_model?: string | null
+          vehicle_type: string
+          vehicle_year?: number | null
+        }
+        Update: {
+          created_at?: string
+          driver_id?: string
+          id?: string
+          plate_number?: string
+          updated_at?: string
+          vehicle_model?: string | null
+          vehicle_type?: string
+          vehicle_year?: number | null
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string

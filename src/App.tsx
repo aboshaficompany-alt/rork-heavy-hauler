@@ -15,11 +15,11 @@ import ShipmentDetails from "./pages/factory/ShipmentDetails";
 import Bids from "./pages/factory/Bids";
 import AdminUsers from "./pages/admin/Users";
 import AdminShipments from "./pages/admin/Shipments";
+import AdminStatistics from "./pages/admin/Statistics";
 import OpenRequests from "./pages/driver/OpenRequests";
 import MyTrips from "./pages/driver/MyTrips";
 import DriverHome from "./pages/driver/DriverHome";
 import ShipmentView from "./pages/driver/ShipmentView";
-import DriverStats from "./pages/driver/DriverStats";
 import NotFound from "./pages/NotFound";
 import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
 
@@ -79,10 +79,10 @@ function AppRoutes() {
       <Route path="/open-requests" element={<ProtectedRoute><OpenRequests /></ProtectedRoute>} />
       <Route path="/my-trips" element={<ProtectedRoute><MyTrips /></ProtectedRoute>} />
       <Route path="/driver/shipment/:id" element={<ProtectedRoute><ShipmentView /></ProtectedRoute>} />
-      <Route path="/driver/stats" element={<ProtectedRoute><DriverStats /></ProtectedRoute>} />
       <Route path="/driver-home" element={<ProtectedRoute><DriverHome /></ProtectedRoute>} />
       <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
       <Route path="/admin/shipments" element={<ProtectedRoute><AdminShipments /></ProtectedRoute>} />
+      <Route path="/admin/stats" element={<ProtectedRoute><AdminStatistics /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
