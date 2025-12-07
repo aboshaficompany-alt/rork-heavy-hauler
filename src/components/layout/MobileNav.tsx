@@ -5,7 +5,8 @@ import {
   FileText, 
   Truck, 
   Settings,
-  Users
+  Users,
+  BarChart3
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
@@ -23,6 +24,7 @@ const navItems: NavItem[] = [
   { label: 'العروض', href: '/bids', icon: FileText, roles: ['factory'] },
   { label: 'الطلبات', href: '/open-requests', icon: Truck, roles: ['driver'] },
   { label: 'رحلاتي', href: '/my-trips', icon: Truck, roles: ['driver'] },
+  { label: 'الإحصائيات', href: '/driver/stats', icon: BarChart3, roles: ['driver'] },
   { label: 'المستخدمين', href: '/admin/users', icon: Users, roles: ['admin'] },
   { label: 'الشحنات', href: '/admin/shipments', icon: Package, roles: ['admin'] },
   { label: 'الإعدادات', href: '/settings', icon: Settings, roles: ['admin', 'factory', 'driver'] },
