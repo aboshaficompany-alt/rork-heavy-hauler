@@ -179,7 +179,7 @@ export default function Auth() {
                           className="flex flex-col items-center justify-between rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
                         >
                           <Factory className="mb-2 h-6 w-6" />
-                          <span className="text-sm font-medium">مصنع</span>
+                          <span className="text-sm font-medium">منشأة</span>
                         </Label>
                       </div>
                       <div>
@@ -212,12 +212,12 @@ export default function Auth() {
 
                   <div className="space-y-2">
                     <Label htmlFor="company-name">
-                      {selectedRole === 'factory' ? 'اسم المصنع' : 'اسم شركة النقل'}
+                      {selectedRole === 'factory' ? 'اسم المنشأة' : 'اسم شركة النقل'}
                     </Label>
                     <Input
                       id="company-name"
                       type="text"
-                      placeholder={selectedRole === 'factory' ? 'مصنع الحديد الوطني' : 'شركة النقل السريع'}
+                      placeholder={selectedRole === 'factory' ? 'المنشأة الوطنية' : 'شركة النقل السريع'}
                       value={companyName}
                       onChange={(e) => setCompanyName(e.target.value)}
                     />

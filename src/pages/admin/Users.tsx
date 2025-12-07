@@ -60,7 +60,7 @@ export default function AdminUsers() {
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <StatsCard title="إجمالي المستخدمين" value={stats.total} icon={<Users className="h-6 w-6" />} />
-          <StatsCard title="المصانع" value={stats.factories} icon={<Factory className="h-6 w-6" />} />
+          <StatsCard title="المنشآت" value={stats.factories} icon={<Factory className="h-6 w-6" />} />
           <StatsCard title="السائقون" value={stats.drivers} icon={<Truck className="h-6 w-6" />} />
           <StatsCard title="المدراء" value={stats.admins} icon={<Shield className="h-6 w-6" />} />
         </div>
@@ -83,7 +83,7 @@ export default function AdminUsers() {
                   <td className="p-4 text-muted-foreground">{user.phone || '-'}</td>
                   <td className="p-4">
                     <span className={`px-2 py-1 rounded text-xs ${user.role === 'admin' ? 'bg-primary/10 text-primary' : user.role === 'factory' ? 'bg-warning/10 text-warning' : 'bg-success/10 text-success'}`}>
-                      {user.role === 'admin' ? 'مدير' : user.role === 'factory' ? 'مصنع' : 'سائق'}
+                      {user.role === 'admin' ? 'مدير' : user.role === 'factory' ? 'منشأة' : 'سائق'}
                     </span>
                   </td>
                 </tr>

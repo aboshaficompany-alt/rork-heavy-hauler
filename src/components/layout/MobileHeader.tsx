@@ -8,7 +8,7 @@ export function MobileHeader() {
   const getRoleLabel = () => {
     switch (role) {
       case 'admin': return 'مدير';
-      case 'factory': return 'مصنع';
+      case 'factory': return 'منشأة';
       case 'driver': return 'سائق';
       default: return '';
     }

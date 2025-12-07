@@ -142,7 +142,7 @@ export default function AdminShipments() {
           <div className="relative flex-1">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="بحث بالمعدة، الموقع، أو اسم المصنع..."
+              placeholder="بحث بالمعدة، الموقع، أو اسم المنشأة..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pr-10"
@@ -175,7 +175,7 @@ export default function AdminShipments() {
               <thead className="bg-muted/50">
                 <tr>
                   <th className="text-right p-4 font-medium">المعدة</th>
-                  <th className="text-right p-4 font-medium">المصنع</th>
+                  <th className="text-right p-4 font-medium">المنشأة</th>
                   <th className="text-right p-4 font-medium">من</th>
                   <th className="text-right p-4 font-medium">إلى</th>
                   <th className="text-right p-4 font-medium">التاريخ</th>

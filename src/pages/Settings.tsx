@@ -131,7 +131,7 @@ export default function Settings() {
                 <h3 className="text-xl font-bold">{formData.full_name}</h3>
                 <p className="text-muted-foreground">{user?.email}</p>
                 <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-primary/10 text-primary text-sm mt-2">
-                  {role === 'admin' ? 'مدير' : role === 'factory' ? 'مصنع' : 'سائق'}
+                  {role === 'admin' ? 'مدير' : role === 'factory' ? 'منشأة' : 'سائق'}
                 </span>
               </div>
             </div>

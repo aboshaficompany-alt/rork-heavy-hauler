@@ -83,7 +83,7 @@ export function Sidebar() {
               <div>
                 <p className="font-medium text-sm">{profile?.full_name || 'المستخدم'}</p>
                 <p className="text-xs text-sidebar-foreground/70">
-                  {role === 'admin' ? 'مدير' : role === 'factory' ? 'مصنع' : 'سائق'}
+                  {role === 'admin' ? 'مدير' : role === 'factory' ? 'منشأة' : 'سائق'}
                 </p>
               </div>
             </div>
