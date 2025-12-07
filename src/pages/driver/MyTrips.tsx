@@ -3,9 +3,11 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
+import { Link } from 'react-router-dom';
 import { 
   Package, 
   MapPin, 
@@ -15,7 +17,8 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
-  DollarSign
+  DollarSign,
+  Eye
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
@@ -304,6 +307,16 @@ export default function MyTrips() {
                         <p className="text-sm text-muted-foreground bg-muted/50 p-2 rounded">
                           {bid.notes}
                         </p>
+                      )}
+
+                      {/* View Details Button for Accepted Bids */}
+                      {bid.status === 'accepted' && (
+                        <Button asChild className="w-full gap-2 mt-2">
+                          <Link to={`/driver/shipment/${bid.shipment.id}`}>
+                            <Eye className="h-4 w-4" />
+                            عرض الخريطة والتفاصيل
+                          </Link>
+                        </Button>
                       )}
                     </CardContent>
                   </Card>
