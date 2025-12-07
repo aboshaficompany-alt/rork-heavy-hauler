@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Package, Menu, X, Volume2, VolumeX, Navigation, Clock, LogOut, User } from 'lucide-react';
+import { Loader2, Package, Menu, X, Volume2, VolumeX, Navigation, Clock, LogOut, User, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -20,6 +20,7 @@ import { useMapboxToken } from '@/hooks/useMapboxToken';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { PushNotificationToggle } from '@/components/notifications/PushNotificationToggle';
 import { PlaceSearch } from '@/components/maps/PlaceSearch';
+import DriverShipmentMap from '@/components/maps/DriverShipmentMap';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,6 +31,7 @@ import {
 
 interface OpenShipment {
   id: string;
+  status: string;
   equipment_type: string;
   pickup_location: string;
   delivery_location: string;
@@ -143,7 +145,7 @@ export default function DriverHome() {
       try {
         const { data, error } = await supabase
           .from('shipments')
-          .select('id, equipment_type, pickup_location, delivery_location, pickup_lat, pickup_lng, delivery_lat, delivery_lng, weight')
+          .select('id, status, equipment_type, pickup_location, delivery_location, pickup_lat, pickup_lng, delivery_lat, delivery_lng, weight')
           .in('status', ['open', 'pending_bids'])
           .order('created_at', { ascending: false });
 
@@ -495,8 +497,9 @@ export default function DriverHome() {
             </div>
             
             <div className="flex gap-3 mt-4">
-              <Button asChild className="flex-1">
-                <Link to={`/shipments/${selectedShipment.id}`}>
+              <Button asChild className="flex-1 gap-2">
+                <Link to={`/driver/shipment/${selectedShipment.id}`}>
+                  <Eye className="h-4 w-4" />
                   عرض التفاصيل
                 </Link>
               </Button>
