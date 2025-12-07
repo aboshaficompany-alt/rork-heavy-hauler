@@ -169,12 +169,18 @@ export default function DriverHome() {
     markers.current.forEach(marker => marker.remove());
     markers.current = [];
 
-    // Remove existing route layer and source
-    if (map.current.getLayer('shipment-route')) {
-      map.current.removeLayer('shipment-route');
-    }
-    if (map.current.getSource('shipment-route')) {
-      map.current.removeSource('shipment-route');
+    // Remove existing route layer and source safely
+    try {
+      if (map.current.getStyle()) {
+        if (map.current.getLayer('shipment-route')) {
+          map.current.removeLayer('shipment-route');
+        }
+        if (map.current.getSource('shipment-route')) {
+          map.current.removeSource('shipment-route');
+        }
+      }
+    } catch (e) {
+      // Ignore if map style not ready
     }
 
     // Add shipment markers
@@ -236,12 +242,18 @@ export default function DriverHome() {
       if (!selectedShipment.pickup_lat || !selectedShipment.pickup_lng || 
           !selectedShipment.delivery_lat || !selectedShipment.delivery_lng) return;
 
-      // Remove existing route
-      if (map.current!.getLayer('selected-route')) {
-        map.current!.removeLayer('selected-route');
-      }
-      if (map.current!.getSource('selected-route')) {
-        map.current!.removeSource('selected-route');
+      // Remove existing route safely
+      try {
+        if (map.current && map.current.getStyle()) {
+          if (map.current.getLayer('selected-route')) {
+            map.current.removeLayer('selected-route');
+          }
+          if (map.current.getSource('selected-route')) {
+            map.current.removeSource('selected-route');
+          }
+        }
+      } catch (e) {
+        // Ignore if map style not ready
       }
 
       try {
@@ -297,11 +309,17 @@ export default function DriverHome() {
     drawRoute();
 
     return () => {
-      if (map.current?.getLayer('selected-route')) {
-        map.current.removeLayer('selected-route');
-      }
-      if (map.current?.getSource('selected-route')) {
-        map.current.removeSource('selected-route');
+      try {
+        if (map.current && map.current.getStyle()) {
+          if (map.current.getLayer('selected-route')) {
+            map.current.removeLayer('selected-route');
+          }
+          if (map.current.getSource('selected-route')) {
+            map.current.removeSource('selected-route');
+          }
+        }
+      } catch (e) {
+        // Map already removed, ignore cleanup errors
       }
     };
   }, [selectedShipment, mapReady]);
