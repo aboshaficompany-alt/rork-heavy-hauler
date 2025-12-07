@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Package, Search, Menu, X, Volume2, VolumeX, Navigation, Clock, LogOut, User } from 'lucide-react';
+import { Loader2, Package, Search, Menu, X, Volume2, VolumeX, Navigation, Clock, LogOut, User, Bell } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -17,6 +17,8 @@ import { useDriverNotifications } from '@/hooks/useDriverNotifications';
 import { useNotificationSound } from '@/hooks/useNotificationSound';
 import { useRouteCalculation } from '@/hooks/useRouteCalculation';
 import { useMapboxToken } from '@/hooks/useMapboxToken';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { PushNotificationToggle } from '@/components/notifications/PushNotificationToggle';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -345,6 +347,9 @@ export default function DriverHome() {
               className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground text-sm"
             />
           </div>
+          
+          {/* Push Notifications Toggle */}
+          <PushNotificationToggle className="w-12 h-12 bg-card/95 backdrop-blur-md shadow-lg" />
           
           {/* Sound Toggle */}
           <button 
