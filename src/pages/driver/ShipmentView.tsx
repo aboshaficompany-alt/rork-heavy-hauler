@@ -11,6 +11,8 @@ import DriverShipmentMap from '@/components/maps/DriverShipmentMap';
 import { ShipmentChat } from '@/components/chat/ShipmentChat';
 import { useAuth } from '@/hooks/useAuth';
 import { useDriverLocation } from '@/hooks/useDriverLocation';
+import { useAutoStatusUpdate } from '@/hooks/useAutoStatusUpdate';
+import { useNotificationSound } from '@/hooks/useNotificationSound';
 import { 
   ArrowRight, 
   MapPin, 
@@ -21,7 +23,8 @@ import {
   Truck,
   MessageCircle,
   Navigation,
-  CheckCircle
+  CheckCircle,
+  MapPinCheck
 } from 'lucide-react';
 
 interface ShipmentData {
@@ -54,10 +57,24 @@ export default function ShipmentView() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { currentLocation } = useDriverLocation();
+  const { playSuccess, playTripComplete } = useNotificationSound();
   const [shipment, setShipment] = useState<ShipmentData | null>(null);
   const [myBid, setMyBid] = useState<BidData | null>(null);
   const [loading, setLoading] = useState(true);
   const [showChat, setShowChat] = useState(false);
+
+  // Auto status update based on location
+  const { isNearPickup, isNearDelivery } = useAutoStatusUpdate({
+    shipmentId: id || '',
+    pickupLat: shipment?.pickup_lat || null,
+    pickupLng: shipment?.pickup_lng || null,
+    deliveryLat: shipment?.delivery_lat || null,
+    deliveryLng: shipment?.delivery_lng || null,
+    currentStatus: shipment?.status || '',
+    driverLat: currentLocation?.lat || null,
+    driverLng: currentLocation?.lng || null,
+    enabled: myBid?.status === 'accepted'
+  });
 
   useEffect(() => {
     if (id && user?.id) {
@@ -101,6 +118,7 @@ export default function ShipmentView() {
         .update({ status: 'in_transit' })
         .eq('id', id);
 
+      playSuccess();
       toast.success('تم بدء الرحلة بنجاح');
       fetchShipmentDetails();
     } catch (error) {
@@ -116,7 +134,8 @@ export default function ShipmentView() {
         .update({ status: 'completed' })
         .eq('id', id);
 
-      toast.success('تم تأكيد التسليم بنجاح');
+      playTripComplete();
+      toast.success('تم تأكيد التسليم بنجاح! 🎉');
       fetchShipmentDetails();
     } catch (error) {
       console.error('Error completing trip:', error);
@@ -278,7 +297,15 @@ export default function ShipmentView() {
               <div className="p-2 rounded-lg bg-primary/10">
                 <Truck className="h-5 w-5 text-primary" />
               </div>
-              <h2 className="text-xl font-bold">بدء الرحلة</h2>
+              <div className="flex-1">
+                <h2 className="text-xl font-bold">بدء الرحلة</h2>
+                {isNearPickup && (
+                  <div className="flex items-center gap-1 text-success text-sm">
+                    <MapPinCheck className="h-4 w-4" />
+                    <span>أنت قريب من موقع الاستلام!</span>
+                  </div>
+                )}
+              </div>
             </div>
             <p className="text-muted-foreground mb-4">
               عند الضغط على "بدء الرحلة" سيتم تحديث حالة الشحنة وسيتمكن العميل من تتبع موقعك.
@@ -297,7 +324,15 @@ export default function ShipmentView() {
               <div className="p-2 rounded-lg bg-success/10">
                 <CheckCircle className="h-5 w-5 text-success" />
               </div>
-              <h2 className="text-xl font-bold">تأكيد التسليم</h2>
+              <div className="flex-1">
+                <h2 className="text-xl font-bold">تأكيد التسليم</h2>
+                {isNearDelivery && (
+                  <div className="flex items-center gap-1 text-success text-sm">
+                    <MapPinCheck className="h-4 w-4" />
+                    <span>أنت قريب من موقع التسليم!</span>
+                  </div>
+                )}
+              </div>
             </div>
             <p className="text-muted-foreground mb-4">
               بعد تسليم الشحنة للعميل، اضغط على الزر أدناه لتأكيد إتمام الرحلة.

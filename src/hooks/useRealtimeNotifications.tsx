@@ -3,11 +3,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
+import { useNotificationSound } from '@/hooks/useNotificationSound';
 
 export function useRealtimeNotifications() {
   const { user, role } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { playAlert, playSuccess, playBidAccepted, playTripComplete } = useNotificationSound();
 
   useEffect(() => {
     if (!user?.id || !role) return;
@@ -35,6 +37,7 @@ export function useRealtimeNotifications() {
               .single();
 
             if (shipment) {
+              playAlert();
               toast({
                 title: '🔔 عرض سعر جديد',
                 description: `تم استلام عرض سعر جديد على شحنة ${shipment.equipment_type}`,
@@ -48,7 +51,7 @@ export function useRealtimeNotifications() {
 
       channels.push(factoryBidsChannel);
 
-      // Shipment status updates
+      // Shipment status updates with sounds
       const factoryShipmentsChannel = supabase
         .channel('factory-shipment-updates')
         .on(
@@ -64,16 +67,27 @@ export function useRealtimeNotifications() {
             const newStatus = payload.new.status;
 
             if (oldStatus !== newStatus) {
-              const statusMessages: Record<string, string> = {
-                in_transit: 'الشحنة في الطريق الآن',
-                completed: 'تم تسليم الشحنة بنجاح',
-                cancelled: 'تم إلغاء الشحنة',
+              const statusMessages: Record<string, { title: string; sound: () => void }> = {
+                in_transit: { 
+                  title: '🚚 الشحنة في الطريق الآن', 
+                  sound: () => playSuccess() 
+                },
+                completed: { 
+                  title: '✅ تم تسليم الشحنة بنجاح!', 
+                  sound: () => playTripComplete() 
+                },
+                cancelled: { 
+                  title: '❌ تم إلغاء الشحنة', 
+                  sound: () => playAlert() 
+                },
               };
 
-              if (statusMessages[newStatus]) {
+              const config = statusMessages[newStatus];
+              if (config) {
+                config.sound();
                 toast({
-                  title: '📦 تحديث الشحنة',
-                  description: statusMessages[newStatus],
+                  title: config.title,
+                  description: `شحنة ${payload.new.equipment_type}`,
                 });
               }
             }
@@ -88,7 +102,7 @@ export function useRealtimeNotifications() {
     // Driver notifications - bid status updates
     if (role === 'driver') {
       const driverBidsChannel = supabase
-        .channel('driver-bid-notifications')
+        .channel('driver-bid-notifications-realtime')
         .on(
           'postgres_changes',
           {
@@ -110,11 +124,13 @@ export function useRealtimeNotifications() {
                 .single();
 
               if (newStatus === 'accepted') {
+                playBidAccepted();
                 toast({
                   title: '🎉 تم قبول عرضك!',
                   description: `تم قبول عرضك على شحنة ${shipment?.equipment_type || ''}`,
                 });
               } else if (newStatus === 'rejected') {
+                playAlert();
                 toast({
                   title: '❌ تم رفض العرض',
                   description: `تم رفض عرضك على شحنة ${shipment?.equipment_type || ''}`,
@@ -141,6 +157,7 @@ export function useRealtimeNotifications() {
           },
           (payload) => {
             if (payload.new.status === 'open') {
+              playAlert();
               toast({
                 title: '🚚 شحنة جديدة متاحة',
                 description: `شحنة ${payload.new.equipment_type} جديدة متاحة للتقديم`,

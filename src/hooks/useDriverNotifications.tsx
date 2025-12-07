@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 
 export function useDriverNotifications() {
   const { user, role } = useAuth();
-  const { playAlert, initAudioContext } = useNotificationSound();
+  const { playAlert, playBidAccepted, playBidRejected, initAudioContext } = useNotificationSound();
   const hasInitializedRef = useRef(false);
 
   useEffect(() => {
@@ -45,7 +45,7 @@ export function useDriverNotifications() {
 
     // Subscribe to bid status changes
     const bidChannel = supabase
-      .channel('driver-bid-notifications')
+      .channel('driver-bid-status-notifications')
       .on(
         'postgres_changes',
         {
@@ -54,19 +54,34 @@ export function useDriverNotifications() {
           table: 'bids',
           filter: `driver_id=eq.${user.id}`
         },
-        (payload) => {
+        async (payload) => {
           const newStatus = (payload.new as any).status;
           const oldStatus = (payload.old as any)?.status;
 
           if (newStatus !== oldStatus) {
-            playAlert();
+            // Get shipment details for better notification
+            const { data: shipment } = await supabase
+              .from('shipments')
+              .select('equipment_type, pickup_location, delivery_location')
+              .eq('id', (payload.new as any).shipment_id)
+              .single();
 
             if (newStatus === 'accepted') {
+              playBidAccepted();
               toast.success('🎉 تم قبول عرضك!', {
-                description: 'تهانينا! يمكنك الآن البدء بالرحلة',
-                duration: 8000
+                description: shipment 
+                  ? `شحنة ${shipment.equipment_type} من ${shipment.pickup_location}`
+                  : 'تهانينا! يمكنك الآن البدء بالرحلة',
+                duration: 10000,
+                action: {
+                  label: 'عرض التفاصيل',
+                  onClick: () => {
+                    window.location.href = `/driver/shipment/${(payload.new as any).shipment_id}`;
+                  }
+                }
               });
             } else if (newStatus === 'rejected') {
+              playBidRejected();
               toast.error('تم رفض عرضك', {
                 description: 'للأسف، لم يتم قبول عرضك على هذه الشحنة',
                 duration: 5000
@@ -81,7 +96,7 @@ export function useDriverNotifications() {
       supabase.removeChannel(channel);
       supabase.removeChannel(bidChannel);
     };
-  }, [user, role, playAlert]);
+  }, [user, role, playAlert, playBidAccepted, playBidRejected]);
 
   // Initialize audio context on first user interaction
   useEffect(() => {
