@@ -10,13 +10,23 @@ interface LocationState {
   speed?: number;
 }
 
+// Default location (Riyadh, Saudi Arabia)
+const DEFAULT_LOCATION: LocationState = {
+  lat: 24.7136,
+  lng: 46.6753
+};
+
 export function useDriverLocation() {
   const { user, role } = useAuth();
   const [isOnline, setIsOnline] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<LocationState | null>(null);
   const [isTracking, setIsTracking] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
   const watchIdRef = useRef<number | null>(null);
   const updateIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Check if geolocation is available
+  const isGeolocationAvailable = typeof navigator !== 'undefined' && 'geolocation' in navigator;
 
   // Update location in database
   const updateLocationInDB = useCallback(async (location: LocationState, online: boolean) => {
@@ -47,12 +57,16 @@ export function useDriverLocation() {
 
   // Start tracking location
   const startTracking = useCallback(() => {
-    if (!navigator.geolocation) {
-      toast.error('الموقع الجغرافي غير مدعوم في هذا المتصفح');
+    if (!isGeolocationAvailable) {
+      setLocationError('الموقع الجغرافي غير متاح في هذا المتصفح');
+      // Use default location
+      setCurrentLocation(DEFAULT_LOCATION);
+      toast.info('تم استخدام موقع افتراضي (الرياض)');
       return;
     }
 
     setIsTracking(true);
+    setLocationError(null);
 
     // Watch position continuously
     watchIdRef.current = navigator.geolocation.watchPosition(
@@ -64,14 +78,35 @@ export function useDriverLocation() {
           speed: position.coords.speed || undefined
         };
         setCurrentLocation(newLocation);
+        setLocationError(null);
       },
       (error) => {
         console.error('Error getting location:', error);
-        toast.error('تعذر الحصول على الموقع');
+        let errorMessage = 'تعذر الحصول على الموقع';
+        
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = 'يرجى السماح بالوصول للموقع من إعدادات المتصفح';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = 'الموقع غير متاح حالياً';
+            break;
+          case error.TIMEOUT:
+            errorMessage = 'انتهت مهلة تحديد الموقع';
+            break;
+        }
+        
+        setLocationError(errorMessage);
+        
+        // Use default location as fallback
+        if (!currentLocation) {
+          setCurrentLocation(DEFAULT_LOCATION);
+          toast.info('تم استخدام موقع افتراضي (الرياض)');
+        }
       },
       {
         enableHighAccuracy: true,
-        timeout: 10000,
+        timeout: 15000,
         maximumAge: 5000
       }
     );
@@ -82,11 +117,11 @@ export function useDriverLocation() {
         updateLocationInDB(currentLocation, isOnline);
       }
     }, 10000);
-  }, [currentLocation, isOnline, updateLocationInDB]);
+  }, [currentLocation, isOnline, updateLocationInDB, isGeolocationAvailable]);
 
   // Stop tracking
   const stopTracking = useCallback(() => {
-    if (watchIdRef.current !== null) {
+    if (watchIdRef.current !== null && isGeolocationAvailable) {
       navigator.geolocation.clearWatch(watchIdRef.current);
       watchIdRef.current = null;
     }
@@ -97,7 +132,7 @@ export function useDriverLocation() {
     }
 
     setIsTracking(false);
-  }, []);
+  }, [isGeolocationAvailable]);
 
   // Toggle online status
   const toggleOnline = useCallback(async (online: boolean) => {
@@ -125,23 +160,39 @@ export function useDriverLocation() {
 
   // Initial location fetch
   useEffect(() => {
-    if (role === 'driver' && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setCurrentLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          });
-        },
-        (error) => console.error('Initial location error:', error)
-      );
+    if (role === 'driver') {
+      if (isGeolocationAvailable) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            setCurrentLocation({
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            });
+          },
+          (error) => {
+            console.warn('Initial location error:', error.message);
+            // Use default location
+            setCurrentLocation(DEFAULT_LOCATION);
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 60000
+          }
+        );
+      } else {
+        // Use default location if geolocation not available
+        setCurrentLocation(DEFAULT_LOCATION);
+      }
     }
-  }, [role]);
+  }, [role, isGeolocationAvailable]);
 
   return {
     isOnline,
     toggleOnline,
     currentLocation,
-    isTracking
+    isTracking,
+    locationError,
+    isGeolocationAvailable
   };
 }
