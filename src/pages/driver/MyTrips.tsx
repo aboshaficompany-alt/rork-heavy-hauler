@@ -53,30 +53,50 @@ export default function MyTrips() {
     queryKey: ['my-trips', user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
-      const { data, error } = await supabase
+      
+      // First get the bids
+      const { data: bidsData, error: bidsError } = await supabase
         .from('bids')
-        .select(`
-          id,
-          price,
-          status,
-          notes,
-          created_at,
-          shipment:shipments(
-            id,
-            pickup_location,
-            delivery_location,
-            equipment_type,
-            weight,
-            pickup_date,
-            status,
-            notes
-          )
-        `)
+        .select('id, price, status, notes, created_at, shipment_id')
         .eq('driver_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      return data as unknown as BidWithShipment[];
+      if (bidsError) {
+        console.error('Error fetching bids:', bidsError);
+        throw bidsError;
+      }
+
+      if (!bidsData || bidsData.length === 0) return [];
+
+      // Get unique shipment IDs
+      const shipmentIds = [...new Set(bidsData.map(b => b.shipment_id))];
+      
+      // Fetch shipments separately
+      const { data: shipmentsData, error: shipmentsError } = await supabase
+        .from('shipments')
+        .select('id, pickup_location, delivery_location, equipment_type, weight, pickup_date, status, notes')
+        .in('id', shipmentIds);
+
+      if (shipmentsError) {
+        console.error('Error fetching shipments:', shipmentsError);
+      }
+
+      // Map shipments to bids
+      const shipmentsMap = new Map(shipmentsData?.map(s => [s.id, s]) || []);
+      
+      return bidsData.map(bid => ({
+        ...bid,
+        shipment: shipmentsMap.get(bid.shipment_id) || {
+          id: bid.shipment_id,
+          pickup_location: 'غير متوفر',
+          delivery_location: 'غير متوفر',
+          equipment_type: 'غير محدد',
+          weight: 0,
+          pickup_date: new Date().toISOString(),
+          status: 'open',
+          notes: null
+        }
+      })) as unknown as BidWithShipment[];
     },
     enabled: !!user?.id,
   });

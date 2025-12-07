@@ -3,24 +3,26 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { StatsCard } from '@/components/ui/stats-card';
 import { supabase } from '@/integrations/supabase/client';
 import { Profile, AppRole } from '@/types/database';
-import { Users, Factory, Truck, Shield, Loader2, Plus, X } from 'lucide-react';
+import { Users, Factory, Truck, Shield, Loader2, Plus, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 
 interface UserWithRole extends Profile {
   role?: AppRole;
   vehicle?: {
+    id: string;
     vehicle_type: string;
     plate_number: string;
     vehicle_model?: string;
   };
 }
 
-interface NewDriverForm {
+interface DriverForm {
   full_name: string;
   phone: string;
   email: string;
@@ -35,7 +37,10 @@ export default function AdminUsers() {
   const [loading, setLoading] = useState(true);
   const [isAddingDriver, setIsAddingDriver] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [newDriver, setNewDriver] = useState<NewDriverForm>({
+  const [editingUser, setEditingUser] = useState<UserWithRole | null>(null);
+  const [deleteUser, setDeleteUser] = useState<UserWithRole | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [driverForm, setDriverForm] = useState<DriverForm>({
     full_name: '',
     phone: '',
     email: '',
@@ -69,22 +74,48 @@ export default function AdminUsers() {
     }
   };
 
+  const resetForm = () => {
+    setDriverForm({
+      full_name: '',
+      phone: '',
+      email: '',
+      password: '',
+      vehicle_type: '',
+      plate_number: '',
+      vehicle_model: ''
+    });
+    setEditingUser(null);
+  };
+
+  const openEditDialog = (user: UserWithRole) => {
+    setEditingUser(user);
+    setDriverForm({
+      full_name: user.full_name,
+      phone: user.phone || '',
+      email: '',
+      password: '',
+      vehicle_type: user.vehicle?.vehicle_type || '',
+      plate_number: user.vehicle?.plate_number || '',
+      vehicle_model: user.vehicle?.vehicle_model || ''
+    });
+    setIsDialogOpen(true);
+  };
+
   const handleAddDriver = async () => {
-    if (!newDriver.full_name || !newDriver.email || !newDriver.password || !newDriver.vehicle_type || !newDriver.plate_number) {
+    if (!driverForm.full_name || !driverForm.email || !driverForm.password || !driverForm.vehicle_type || !driverForm.plate_number) {
       toast.error('يرجى ملء جميع الحقول المطلوبة');
       return;
     }
 
     setIsAddingDriver(true);
     try {
-      // Create user via Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: newDriver.email,
-        password: newDriver.password,
+        email: driverForm.email,
+        password: driverForm.password,
         options: {
           data: {
-            full_name: newDriver.full_name,
-            phone: newDriver.phone,
+            full_name: driverForm.full_name,
+            phone: driverForm.phone,
             company_name: '',
             role: 'driver'
           }
@@ -94,33 +125,110 @@ export default function AdminUsers() {
       if (authError) throw authError;
       if (!authData.user) throw new Error('فشل في إنشاء المستخدم');
 
-      // Add vehicle info
       const { error: vehicleError } = await supabase.from('driver_vehicles').insert({
         driver_id: authData.user.id,
-        vehicle_type: newDriver.vehicle_type,
-        plate_number: newDriver.plate_number,
-        vehicle_model: newDriver.vehicle_model || null
+        vehicle_type: driverForm.vehicle_type,
+        plate_number: driverForm.plate_number,
+        vehicle_model: driverForm.vehicle_model || null
       });
 
       if (vehicleError) throw vehicleError;
 
       toast.success('تم إضافة السائق بنجاح');
       setIsDialogOpen(false);
-      setNewDriver({
-        full_name: '',
-        phone: '',
-        email: '',
-        password: '',
-        vehicle_type: '',
-        plate_number: '',
-        vehicle_model: ''
-      });
+      resetForm();
       fetchUsers();
     } catch (error: any) {
       console.error('Error adding driver:', error);
       toast.error(error.message || 'فشل في إضافة السائق');
     } finally {
       setIsAddingDriver(false);
+    }
+  };
+
+  const handleUpdateDriver = async () => {
+    if (!editingUser) return;
+    if (!driverForm.full_name) {
+      toast.error('يرجى ملء الاسم');
+      return;
+    }
+
+    setIsAddingDriver(true);
+    try {
+      // Update profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          full_name: driverForm.full_name,
+          phone: driverForm.phone
+        })
+        .eq('user_id', editingUser.user_id);
+
+      if (profileError) throw profileError;
+
+      // Update vehicle if driver
+      if (editingUser.role === 'driver' && driverForm.vehicle_type && driverForm.plate_number) {
+        if (editingUser.vehicle?.id) {
+          const { error: vehicleError } = await supabase
+            .from('driver_vehicles')
+            .update({
+              vehicle_type: driverForm.vehicle_type,
+              plate_number: driverForm.plate_number,
+              vehicle_model: driverForm.vehicle_model || null
+            })
+            .eq('id', editingUser.vehicle.id);
+
+          if (vehicleError) throw vehicleError;
+        } else {
+          const { error: vehicleError } = await supabase.from('driver_vehicles').insert({
+            driver_id: editingUser.user_id,
+            vehicle_type: driverForm.vehicle_type,
+            plate_number: driverForm.plate_number,
+            vehicle_model: driverForm.vehicle_model || null
+          });
+
+          if (vehicleError) throw vehicleError;
+        }
+      }
+
+      toast.success('تم تحديث البيانات بنجاح');
+      setIsDialogOpen(false);
+      resetForm();
+      fetchUsers();
+    } catch (error: any) {
+      console.error('Error updating:', error);
+      toast.error(error.message || 'فشل في التحديث');
+    } finally {
+      setIsAddingDriver(false);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!deleteUser) return;
+
+    setIsDeleting(true);
+    try {
+      // Delete vehicle if exists
+      if (deleteUser.vehicle?.id) {
+        await supabase.from('driver_vehicles').delete().eq('id', deleteUser.vehicle.id);
+      }
+
+      // Note: Cannot delete auth user from client, only profile and related data
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('user_id', deleteUser.user_id);
+
+      if (error) throw error;
+
+      toast.success('تم حذف المستخدم بنجاح');
+      setDeleteUser(null);
+      fetchUsers();
+    } catch (error: any) {
+      console.error('Error deleting:', error);
+      toast.error(error.message || 'فشل في الحذف');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -146,7 +254,7 @@ export default function AdminUsers() {
       <div className="space-y-6 animate-fade-in">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">إدارة المستخدمين</h1>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
               <Button className="gap-2">
                 <Plus className="h-4 w-4" />
@@ -155,88 +263,96 @@ export default function AdminUsers() {
             </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader>
-                <DialogTitle>إضافة سائق جديد</DialogTitle>
+                <DialogTitle>{editingUser ? 'تعديل بيانات المستخدم' : 'إضافة سائق جديد'}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 mt-4">
                 <div className="space-y-2">
                   <Label>الاسم الكامل *</Label>
                   <Input
-                    value={newDriver.full_name}
-                    onChange={(e) => setNewDriver(prev => ({ ...prev, full_name: e.target.value }))}
-                    placeholder="أدخل اسم السائق"
+                    value={driverForm.full_name}
+                    onChange={(e) => setDriverForm(prev => ({ ...prev, full_name: e.target.value }))}
+                    placeholder="أدخل الاسم"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>البريد الإلكتروني *</Label>
-                  <Input
-                    type="email"
-                    value={newDriver.email}
-                    onChange={(e) => setNewDriver(prev => ({ ...prev, email: e.target.value }))}
-                    placeholder="example@email.com"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>كلمة المرور *</Label>
-                  <Input
-                    type="password"
-                    value={newDriver.password}
-                    onChange={(e) => setNewDriver(prev => ({ ...prev, password: e.target.value }))}
-                    placeholder="أدخل كلمة المرور"
-                  />
-                </div>
+                {!editingUser && (
+                  <>
+                    <div className="space-y-2">
+                      <Label>البريد الإلكتروني *</Label>
+                      <Input
+                        type="email"
+                        value={driverForm.email}
+                        onChange={(e) => setDriverForm(prev => ({ ...prev, email: e.target.value }))}
+                        placeholder="example@email.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>كلمة المرور *</Label>
+                      <Input
+                        type="password"
+                        value={driverForm.password}
+                        onChange={(e) => setDriverForm(prev => ({ ...prev, password: e.target.value }))}
+                        placeholder="أدخل كلمة المرور"
+                      />
+                    </div>
+                  </>
+                )}
                 <div className="space-y-2">
                   <Label>رقم الهاتف</Label>
                   <Input
-                    value={newDriver.phone}
-                    onChange={(e) => setNewDriver(prev => ({ ...prev, phone: e.target.value }))}
+                    value={driverForm.phone}
+                    onChange={(e) => setDriverForm(prev => ({ ...prev, phone: e.target.value }))}
                     placeholder="05xxxxxxxx"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>نوع المركبة *</Label>
-                  <Select 
-                    value={newDriver.vehicle_type} 
-                    onValueChange={(value) => setNewDriver(prev => ({ ...prev, vehicle_type: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="اختر نوع المركبة" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="سطحة">سطحة</SelectItem>
-                      <SelectItem value="جوانب">جوانب</SelectItem>
-                      <SelectItem value="براد">براد</SelectItem>
-                      <SelectItem value="لوبد">لوبد</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>رقم اللوحة *</Label>
-                  <Input
-                    value={newDriver.plate_number}
-                    onChange={(e) => setNewDriver(prev => ({ ...prev, plate_number: e.target.value }))}
-                    placeholder="أدخل رقم اللوحة"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>موديل المركبة</Label>
-                  <Input
-                    value={newDriver.vehicle_model}
-                    onChange={(e) => setNewDriver(prev => ({ ...prev, vehicle_model: e.target.value }))}
-                    placeholder="مثال: تويوتا 2020"
-                  />
-                </div>
+                {(!editingUser || editingUser.role === 'driver') && (
+                  <>
+                    <div className="space-y-2">
+                      <Label>نوع المركبة {!editingUser && '*'}</Label>
+                      <Select 
+                        value={driverForm.vehicle_type} 
+                        onValueChange={(value) => setDriverForm(prev => ({ ...prev, vehicle_type: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="اختر نوع المركبة" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="سطحة">سطحة</SelectItem>
+                          <SelectItem value="جوانب">جوانب</SelectItem>
+                          <SelectItem value="براد">براد</SelectItem>
+                          <SelectItem value="لوبد">لوبد</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>رقم اللوحة {!editingUser && '*'}</Label>
+                      <Input
+                        value={driverForm.plate_number}
+                        onChange={(e) => setDriverForm(prev => ({ ...prev, plate_number: e.target.value }))}
+                        placeholder="أدخل رقم اللوحة"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>موديل المركبة</Label>
+                      <Input
+                        value={driverForm.vehicle_model}
+                        onChange={(e) => setDriverForm(prev => ({ ...prev, vehicle_model: e.target.value }))}
+                        placeholder="مثال: تويوتا 2020"
+                      />
+                    </div>
+                  </>
+                )}
                 <Button 
-                  onClick={handleAddDriver} 
+                  onClick={editingUser ? handleUpdateDriver : handleAddDriver} 
                   disabled={isAddingDriver}
                   className="w-full"
                 >
                   {isAddingDriver ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin ml-2" />
-                      جاري الإضافة...
+                      جاري الحفظ...
                     </>
                   ) : (
-                    'إضافة السائق'
+                    editingUser ? 'حفظ التعديلات' : 'إضافة السائق'
                   )}
                 </Button>
               </div>
@@ -252,7 +368,7 @@ export default function AdminUsers() {
         </div>
 
         <div className="bg-card rounded-xl border border-border overflow-hidden overflow-x-auto">
-          <table className="w-full min-w-[700px]">
+          <table className="w-full min-w-[800px]">
             <thead className="bg-muted/50">
               <tr>
                 <th className="text-right p-4 font-medium">الاسم</th>
@@ -260,6 +376,7 @@ export default function AdminUsers() {
                 <th className="text-right p-4 font-medium">الهاتف</th>
                 <th className="text-right p-4 font-medium">رقم اللوحة</th>
                 <th className="text-right p-4 font-medium">الدور</th>
+                <th className="text-right p-4 font-medium">الإجراءات</th>
               </tr>
             </thead>
             <tbody>
@@ -278,11 +395,52 @@ export default function AdminUsers() {
                       {user.role === 'admin' ? 'مدير' : user.role === 'factory' ? 'منشأة' : 'سائق'}
                     </span>
                   </td>
+                  <td className="p-4">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => openEditDialog(user)}
+                        className="h-8 w-8 text-muted-foreground hover:text-primary"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setDeleteUser(user)}
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+
+        <AlertDialog open={!!deleteUser} onOpenChange={() => setDeleteUser(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
+              <AlertDialogDescription>
+                سيتم حذف بيانات "{deleteUser?.full_name}" بشكل نهائي. لا يمكن التراجع عن هذا الإجراء.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>إلغاء</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteUser}
+                disabled={isDeleting}
+                className="bg-destructive hover:bg-destructive/90"
+              >
+                {isDeleting ? 'جاري الحذف...' : 'حذف'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   );
