@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import ShipmentMap from '@/components/maps/ShipmentMap';
-import DriverLocationMap from '@/components/maps/DriverLocationMap';
+import RealtimeDriverTracker from '@/components/maps/RealtimeDriverTracker';
 import { RouteInfoCard } from '@/components/shipments/RouteInfoCard';
 import { ShipmentChat } from '@/components/chat/ShipmentChat';
 import { DriverRating, RatingDisplay } from '@/components/ratings/DriverRating';
@@ -323,23 +323,19 @@ export default function ShipmentDetails() {
                   </div>
                 </div>
 
-                {/* Driver Location Tracking */}
+                {/* Real-time Driver Tracking */}
                 {shipment.accepted_bid_id && bids.find(b => b.id === shipment.accepted_bid_id) && (
-                  <div className="bg-card rounded-xl p-6 border border-border">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="p-2 rounded-lg bg-primary/10">
-                        <Truck className="h-5 w-5 text-primary" />
-                      </div>
-                      <h2 className="text-xl font-bold">تتبع السائق</h2>
-                    </div>
-                    <DriverLocationMap
-                      driverId={bids.find(b => b.id === shipment.accepted_bid_id)!.driver_id}
-                      pickupLat={shipment.pickup_lat}
-                      pickupLng={shipment.pickup_lng}
-                      deliveryLat={shipment.delivery_lat}
-                      deliveryLng={shipment.delivery_lng}
-                    />
-                  </div>
+                  <RealtimeDriverTracker
+                    driverId={bids.find(b => b.id === shipment.accepted_bid_id)!.driver_id}
+                    pickupLat={shipment.pickup_lat}
+                    pickupLng={shipment.pickup_lng}
+                    deliveryLat={shipment.delivery_lat}
+                    deliveryLng={shipment.delivery_lng}
+                    pickupLocation={shipment.pickup_location}
+                    deliveryLocation={shipment.delivery_location}
+                    showRoute={true}
+                    height="h-96"
+                  />
                 )}
               </>
             )}
