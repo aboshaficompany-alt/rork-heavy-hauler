@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -18,7 +18,9 @@ import {
   CheckCircle2,
   XCircle,
   DollarSign,
-  Eye
+  Eye,
+  Navigation,
+  ArrowLeft
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
@@ -123,6 +125,8 @@ export default function MyTrips() {
         return bid.status === 'accepted';
       case 'rejected':
         return bid.status === 'rejected';
+      case 'active':
+        return bid.status === 'accepted' && ['bid_accepted', 'in_transit'].includes(bid.shipment.status);
       default:
         return true;
     }
@@ -133,85 +137,122 @@ export default function MyTrips() {
     pending: bids?.filter(b => b.status === 'pending').length || 0,
     accepted: bids?.filter(b => b.status === 'accepted').length || 0,
     rejected: bids?.filter(b => b.status === 'rejected').length || 0,
+    active: bids?.filter(b => b.status === 'accepted' && ['bid_accepted', 'in_transit'].includes(b.shipment.status)).length || 0,
   };
 
-  const getBidStatusIcon = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <Clock className="h-5 w-5 text-warning" />;
-      case 'accepted':
-        return <CheckCircle2 className="h-5 w-5 text-success" />;
-      case 'rejected':
-        return <XCircle className="h-5 w-5 text-destructive" />;
-      default:
-        return null;
+  const getBidStatusConfig = (status: string, shipmentStatus?: string) => {
+    if (status === 'accepted' && shipmentStatus === 'in_transit') {
+      return {
+        icon: <Navigation className="h-5 w-5" />,
+        text: 'في الطريق',
+        bgColor: 'bg-primary/10',
+        textColor: 'text-primary',
+        borderColor: 'border-primary/20'
+      };
     }
-  };
-
-  const getBidStatusText = (status: string) => {
     switch (status) {
       case 'pending':
-        return 'قيد المراجعة';
+        return {
+          icon: <Clock className="h-5 w-5" />,
+          text: 'قيد المراجعة',
+          bgColor: 'bg-warning/10',
+          textColor: 'text-warning',
+          borderColor: 'border-warning/20'
+        };
       case 'accepted':
-        return 'مقبول';
+        return {
+          icon: <CheckCircle2 className="h-5 w-5" />,
+          text: 'مقبول',
+          bgColor: 'bg-success/10',
+          textColor: 'text-success',
+          borderColor: 'border-success/20'
+        };
       case 'rejected':
-        return 'مرفوض';
+        return {
+          icon: <XCircle className="h-5 w-5" />,
+          text: 'مرفوض',
+          bgColor: 'bg-destructive/10',
+          textColor: 'text-destructive',
+          borderColor: 'border-destructive/20'
+        };
       default:
-        return status;
+        return {
+          icon: null,
+          text: status,
+          bgColor: 'bg-muted',
+          textColor: 'text-muted-foreground',
+          borderColor: 'border-border'
+        };
     }
   };
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold">رحلاتي</h1>
-          <p className="text-muted-foreground">متابعة عروضك ورحلاتك</p>
+      <div className="space-y-6 animate-fade-in">
+        {/* Header */}
+        <div className="bg-gradient-to-l from-primary/5 to-transparent rounded-2xl p-6">
+          <h1 className="text-2xl font-bold text-foreground">رحلاتي</h1>
+          <p className="text-muted-foreground mt-1">متابعة عروضك ورحلاتك النشطة</p>
         </div>
 
-        {/* Stats */}
-        <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardContent className="pt-6">
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">إجمالي العروض</p>
-                  <p className="text-2xl font-bold">{stats.total}</p>
+                  <p className="text-xs text-muted-foreground">الإجمالي</p>
+                  <p className="text-2xl font-bold text-primary">{stats.total}</p>
                 </div>
-                <Package className="h-8 w-8 text-primary opacity-80" />
+                <Package className="h-8 w-8 text-primary/40" />
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="pt-6">
+          
+          <Card className="bg-gradient-to-br from-success/10 to-success/5 border-success/20">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">قيد المراجعة</p>
-                  <p className="text-2xl font-bold">{stats.pending}</p>
+                  <p className="text-xs text-muted-foreground">نشطة</p>
+                  <p className="text-2xl font-bold text-success">{stats.active}</p>
                 </div>
-                <Clock className="h-8 w-8 text-warning opacity-80" />
+                <Navigation className="h-8 w-8 text-success/40" />
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="pt-6">
+
+          <Card className="bg-gradient-to-br from-warning/10 to-warning/5 border-warning/20">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">مقبولة</p>
-                  <p className="text-2xl font-bold">{stats.accepted}</p>
+                  <p className="text-xs text-muted-foreground">قيد المراجعة</p>
+                  <p className="text-2xl font-bold text-warning">{stats.pending}</p>
                 </div>
-                <CheckCircle2 className="h-8 w-8 text-success opacity-80" />
+                <Clock className="h-8 w-8 text-warning/40" />
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="pt-6">
+
+          <Card className="border-success/20">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">مرفوضة</p>
-                  <p className="text-2xl font-bold">{stats.rejected}</p>
+                  <p className="text-xs text-muted-foreground">مقبولة</p>
+                  <p className="text-2xl font-bold text-success">{stats.accepted}</p>
                 </div>
-                <XCircle className="h-8 w-8 text-destructive opacity-80" />
+                <CheckCircle2 className="h-8 w-8 text-success/40" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-destructive/20">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground">مرفوضة</p>
+                  <p className="text-2xl font-bold text-destructive">{stats.rejected}</p>
+                </div>
+                <XCircle className="h-8 w-8 text-destructive/40" />
               </div>
             </CardContent>
           </Card>
@@ -219,108 +260,151 @@ export default function MyTrips() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
-            <TabsTrigger value="all">الكل ({stats.total})</TabsTrigger>
-            <TabsTrigger value="pending">قيد المراجعة ({stats.pending})</TabsTrigger>
-            <TabsTrigger value="accepted">مقبولة ({stats.accepted})</TabsTrigger>
-            <TabsTrigger value="rejected">مرفوضة ({stats.rejected})</TabsTrigger>
+          <TabsList className="grid grid-cols-5 w-full">
+            <TabsTrigger value="all" className="text-xs sm:text-sm">الكل</TabsTrigger>
+            <TabsTrigger value="active" className="text-xs sm:text-sm">نشطة</TabsTrigger>
+            <TabsTrigger value="pending" className="text-xs sm:text-sm">قيد المراجعة</TabsTrigger>
+            <TabsTrigger value="accepted" className="text-xs sm:text-sm">مقبولة</TabsTrigger>
+            <TabsTrigger value="rejected" className="text-xs sm:text-sm">مرفوضة</TabsTrigger>
           </TabsList>
 
           <TabsContent value={activeTab} className="mt-6">
             {isLoading ? (
-              <div className="grid gap-4 md:grid-cols-2">
-                {[1, 2].map((i) => (
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
                   <Card key={i} className="animate-pulse">
-                    <CardContent className="h-48" />
+                    <CardContent className="h-40" />
                   </Card>
                 ))}
               </div>
             ) : filteredBids?.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <Truck className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">
+              <Card className="border-dashed">
+                <CardContent className="py-16 text-center">
+                  <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+                    <Truck className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <p className="text-muted-foreground text-lg">
                     {activeTab === 'all' 
                       ? 'لم تقدم أي عروض بعد'
-                      : `لا توجد عروض ${getBidStatusText(activeTab)}`
+                      : activeTab === 'active'
+                      ? 'لا توجد رحلات نشطة حالياً'
+                      : `لا توجد عروض ${activeTab === 'pending' ? 'قيد المراجعة' : activeTab === 'accepted' ? 'مقبولة' : 'مرفوضة'}`
                     }
                   </p>
+                  <Button asChild variant="outline" className="mt-4">
+                    <Link to="/driver">
+                      <Package className="h-4 w-4 ml-2" />
+                      استعرض الشحنات المتاحة
+                    </Link>
+                  </Button>
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2">
-                {filteredBids?.map((bid) => (
-                  <Card key={bid.id} className="hover:shadow-lg transition-shadow">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg flex items-center gap-2">
-                          <Truck className="h-5 w-5 text-primary" />
-                          {bid.shipment.equipment_type}
-                        </CardTitle>
-                        <div className="flex items-center gap-2">
-                          {getBidStatusIcon(bid.status)}
-                          <span className="text-sm font-medium">
-                            {getBidStatusText(bid.status)}
-                          </span>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <div className="flex items-start gap-2 text-sm">
-                          <MapPin className="h-4 w-4 text-success mt-0.5 shrink-0" />
-                          <div>
-                            <span className="text-muted-foreground">من: </span>
-                            {bid.shipment.pickup_location}
+              <div className="space-y-4">
+                {filteredBids?.map((bid) => {
+                  const statusConfig = getBidStatusConfig(bid.status, bid.shipment.status);
+                  const isActive = bid.status === 'accepted' && ['bid_accepted', 'in_transit'].includes(bid.shipment.status);
+                  
+                  return (
+                    <Card 
+                      key={bid.id} 
+                      className={`overflow-hidden transition-all hover:shadow-lg ${
+                        isActive ? 'border-primary/30 bg-primary/5' : ''
+                      }`}
+                    >
+                      <CardContent className="p-0">
+                        {/* Status Header */}
+                        <div className={`px-4 py-3 ${statusConfig.bgColor} border-b ${statusConfig.borderColor}`}>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className={statusConfig.textColor}>
+                                {statusConfig.icon}
+                              </div>
+                              <span className={`font-medium ${statusConfig.textColor}`}>
+                                {statusConfig.text}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground">
+                                {format(new Date(bid.created_at), 'dd MMM', { locale: ar })}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                        <div className="flex items-start gap-2 text-sm">
-                          <MapPin className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
-                          <div>
-                            <span className="text-muted-foreground">إلى: </span>
-                            {bid.shipment.delivery_location}
+
+                        {/* Main Content */}
+                        <div className="p-4">
+                          {/* Equipment Type and Price */}
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 rounded-lg bg-primary/10">
+                                <Truck className="h-5 w-5 text-primary" />
+                              </div>
+                              <div>
+                                <h3 className="font-bold text-foreground">{bid.shipment.equipment_type}</h3>
+                                <p className="text-sm text-muted-foreground">{bid.shipment.weight} طن</p>
+                              </div>
+                            </div>
+                            <div className="text-left">
+                              <div className="flex items-center gap-1 justify-end">
+                                <DollarSign className="h-4 w-4 text-primary" />
+                                <span className="text-xl font-bold text-primary">{bid.price.toLocaleString()}</span>
+                              </div>
+                              <span className="text-xs text-muted-foreground">ريال</span>
+                            </div>
                           </div>
-                        </div>
-                      </div>
 
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Weight className="h-4 w-4" />
-                          {bid.shipment.weight} طن
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-4 w-4" />
-                          {format(new Date(bid.shipment.pickup_date), 'dd MMM yyyy', { locale: ar })}
-                        </div>
-                      </div>
+                          {/* Locations */}
+                          <div className="space-y-2 mb-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-3 h-3 rounded-full bg-success" />
+                              <span className="text-sm text-foreground truncate flex-1">{bid.shipment.pickup_location}</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="w-3 h-3 rounded-full bg-destructive" />
+                              <span className="text-sm text-foreground truncate flex-1">{bid.shipment.delivery_location}</span>
+                            </div>
+                          </div>
 
-                      <div className="flex items-center justify-between pt-2 border-t">
-                        <div className="flex items-center gap-2">
-                          <DollarSign className="h-4 w-4 text-primary" />
-                          <span className="font-bold text-lg">{bid.price.toLocaleString()}</span>
-                          <span className="text-sm text-muted-foreground">ريال</span>
+                          {/* Meta Info */}
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground mb-4">
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-3.5 w-3.5" />
+                              {format(new Date(bid.shipment.pickup_date), 'dd MMM yyyy', { locale: ar })}
+                            </div>
+                            <StatusBadge status={bid.shipment.status as any} />
+                          </div>
+
+                          {bid.notes && (
+                            <p className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg mb-4">
+                              {bid.notes}
+                            </p>
+                          )}
+
+                          {/* Action Button for Accepted/Active Bids */}
+                          {bid.status === 'accepted' && (
+                            <Button asChild className="w-full gap-2" variant={isActive ? 'default' : 'outline'}>
+                              <Link to={`/driver/shipment/${bid.shipment.id}`}>
+                                {isActive ? (
+                                  <>
+                                    <Navigation className="h-4 w-4" />
+                                    متابعة الرحلة
+                                  </>
+                                ) : (
+                                  <>
+                                    <Eye className="h-4 w-4" />
+                                    عرض التفاصيل
+                                  </>
+                                )}
+                                <ArrowLeft className="h-4 w-4 mr-auto" />
+                              </Link>
+                            </Button>
+                          )}
                         </div>
-                        <StatusBadge status={bid.shipment.status as 'open' | 'pending_bids' | 'bid_accepted' | 'in_transit' | 'completed' | 'cancelled'} />
-                      </div>
-
-                      {bid.notes && (
-                        <p className="text-sm text-muted-foreground bg-muted/50 p-2 rounded">
-                          {bid.notes}
-                        </p>
-                      )}
-
-                      {/* View Details Button for Accepted Bids */}
-                      {bid.status === 'accepted' && (
-                        <Button asChild className="w-full gap-2 mt-2">
-                          <Link to={`/driver/shipment/${bid.shipment.id}`}>
-                            <Eye className="h-4 w-4" />
-                            عرض الخريطة والتفاصيل
-                          </Link>
-                        </Button>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             )}
           </TabsContent>

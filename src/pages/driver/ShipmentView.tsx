@@ -100,9 +100,9 @@ export default function ShipmentView() {
         .select('*')
         .eq('shipment_id', id)
         .eq('driver_id', user?.id)
-        .single();
+        .maybeSingle();
 
-      setMyBid(bidData || null);
+      setMyBid(bidData);
     } catch (error) {
       console.error('Error fetching shipment:', error);
       toast.error('حدث خطأ أثناء تحميل البيانات');
