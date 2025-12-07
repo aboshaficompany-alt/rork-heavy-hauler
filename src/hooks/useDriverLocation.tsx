@@ -12,12 +12,22 @@ interface LocationState {
 
 export function useDriverLocation() {
   const { user, role } = useAuth();
-  const [isOnline, setIsOnline] = useState(false);
+  
+  // Persist online status in localStorage
+  const [isOnline, setIsOnline] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('driver_is_online');
+      return saved === 'true';
+    }
+    return false;
+  });
+  
   const [currentLocation, setCurrentLocation] = useState<LocationState | null>(null);
   const [isTracking, setIsTracking] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const watchIdRef = useRef<number | null>(null);
   const updateIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const locationRef = useRef<LocationState | null>(null);
 
   // Check if geolocation is available
   const isGeolocationAvailable = typeof navigator !== 'undefined' && 'geolocation' in navigator;
@@ -71,6 +81,7 @@ export function useDriverLocation() {
           speed: position.coords.speed || undefined
         };
         setCurrentLocation(newLocation);
+        locationRef.current = newLocation;
         setLocationError(null);
       },
       (error) => {
@@ -90,22 +101,22 @@ export function useDriverLocation() {
         }
         
         setLocationError(errorMessage);
-        toast.error(errorMessage);
       },
       {
         enableHighAccuracy: true,
         timeout: 15000,
-        maximumAge: 3000 // More frequent updates
+        maximumAge: 3000
       }
     );
 
-    // Update DB every 5 seconds for smoother tracking
+    // Update DB every 5 seconds using ref for latest location
     updateIntervalRef.current = setInterval(() => {
-      if (currentLocation && isOnline) {
-        updateLocationInDB(currentLocation, isOnline);
+      const loc = locationRef.current;
+      if (loc) {
+        updateLocationInDB(loc, true);
       }
     }, 5000);
-  }, [currentLocation, isOnline, updateLocationInDB, isGeolocationAvailable]);
+  }, [updateLocationInDB, isGeolocationAvailable]);
 
   // Stop tracking
   const stopTracking = useCallback(() => {
@@ -125,26 +136,47 @@ export function useDriverLocation() {
   // Toggle online status
   const toggleOnline = useCallback(async (online: boolean) => {
     setIsOnline(online);
+    
+    // Persist to localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('driver_is_online', online ? 'true' : 'false');
+    }
 
     if (online) {
       startTracking();
-      if (currentLocation) {
-        await updateLocationInDB(currentLocation, true);
+      const loc = locationRef.current || currentLocation;
+      if (loc) {
+        await updateLocationInDB(loc, true);
       }
     } else {
       stopTracking();
-      if (currentLocation) {
-        await updateLocationInDB(currentLocation, false);
+      const loc = locationRef.current || currentLocation;
+      if (loc) {
+        await updateLocationInDB(loc, false);
       }
     }
   }, [startTracking, stopTracking, currentLocation, updateLocationInDB]);
 
-  // Cleanup on unmount
+  // Cleanup on unmount - but don't reset online status
   useEffect(() => {
     return () => {
-      stopTracking();
+      if (watchIdRef.current !== null && isGeolocationAvailable) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+      if (updateIntervalRef.current) {
+        clearInterval(updateIntervalRef.current);
+        updateIntervalRef.current = null;
+      }
     };
-  }, [stopTracking]);
+  }, [isGeolocationAvailable]);
+
+  // Auto-start tracking if driver was online
+  useEffect(() => {
+    if (role === 'driver' && isOnline && !isTracking && isGeolocationAvailable) {
+      startTracking();
+    }
+  }, [role, isOnline, isTracking, isGeolocationAvailable, startTracking]);
 
   // Initial location fetch
   useEffect(() => {
