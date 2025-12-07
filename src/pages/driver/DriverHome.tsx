@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { MobileNav } from '@/components/layout/MobileNav';
@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Package, Search, Menu, X, Volume2, VolumeX, Navigation, Clock, LogOut, User, Bell } from 'lucide-react';
+import { Loader2, Package, Menu, X, Volume2, VolumeX, Navigation, Clock, LogOut, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -19,6 +19,7 @@ import { useRouteCalculation } from '@/hooks/useRouteCalculation';
 import { useMapboxToken } from '@/hooks/useMapboxToken';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { PushNotificationToggle } from '@/components/notifications/PushNotificationToggle';
+import { PlaceSearch } from '@/components/maps/PlaceSearch';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -338,13 +339,20 @@ export default function DriverHome() {
       {/* Top Bar */}
       <div className="absolute top-0 left-0 right-0 z-10 p-4 safe-area-top">
         <div className="flex items-center gap-3">
-          {/* Search Bar */}
-          <div className="flex-1 bg-card/95 backdrop-blur-md rounded-full shadow-lg flex items-center px-4 py-3">
-            <Search className="h-5 w-5 text-muted-foreground ml-2" />
-            <input
-              type="text"
+          {/* Search Bar with Place Search */}
+          <div className="flex-1 relative">
+            <PlaceSearch
               placeholder="ابحث عن موقع..."
-              className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground text-sm"
+              className="w-full"
+              onSelect={(place) => {
+                if (map.current) {
+                  map.current.flyTo({
+                    center: [place.lng, place.lat],
+                    zoom: 14,
+                    duration: 1500
+                  });
+                }
+              }}
             />
           </div>
           
