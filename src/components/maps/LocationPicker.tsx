@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Button } from '@/components/ui/button';
-import { MapPin, Navigation, Truck, Crosshair, Loader2, AlertCircle, Route, Clock } from 'lucide-react';
+import { MapPin, Navigation, Truck, Crosshair, Loader2, AlertCircle, Route, Clock, Search } from 'lucide-react';
 import { useMapboxToken } from '@/hooks/useMapboxToken';
 import { useGPSLocation } from '@/hooks/useGPSLocation';
 import { supabase } from '@/integrations/supabase/client';
+import { PlaceSearch } from './PlaceSearch';
 
 interface LocationPickerProps {
   pickupLat?: number | null;
@@ -435,6 +436,25 @@ const LocationPicker = ({
         </Button>
       </div>
 
+      {/* Place Search */}
+      <PlaceSearch
+        placeholder={activeMarker === 'pickup' ? 'ابحث عن موقع الاستلام...' : 'ابحث عن موقع التسليم...'}
+        onSelect={(place) => {
+          if (activeMarker === 'pickup') {
+            onPickupChange(place.lat, place.lng);
+          } else {
+            onDeliveryChange(place.lat, place.lng);
+          }
+          if (map.current) {
+            map.current.flyTo({
+              center: [place.lng, place.lat],
+              zoom: 14,
+              duration: 1000
+            });
+          }
+        }}
+      />
+
       {/* Marker selection buttons */}
       <div className="flex gap-2">
         <Button
@@ -462,7 +482,7 @@ const LocationPicker = ({
       </div>
 
       <p className="text-xs text-muted-foreground">
-        انقر على الخريطة لتحديد {activeMarker === 'pickup' ? 'موقع الاستلام' : 'موقع التسليم'}، أو اضغط "موقعي الحالي" لاستخدام GPS
+        ابحث عن موقع أو انقر على الخريطة لتحديد {activeMarker === 'pickup' ? 'موقع الاستلام' : 'موقع التسليم'}
       </p>
 
       <div ref={mapContainer} className="h-80 rounded-lg overflow-hidden relative shadow-lg" />
