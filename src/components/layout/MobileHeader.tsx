@@ -14,11 +14,13 @@ export function MobileHeader() {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 lg:hidden h-16 bg-primary z-50 px-4 flex items-center justify-between safe-area-top shadow-lg">
+    <header className="fixed top-0 left-0 right-0 lg:hidden h-16 bg-gradient-to-l from-primary to-accent z-50 px-4 flex items-center justify-between safe-area-top shadow-lg">
       {/* Logo */}
       <div className="flex items-center gap-3">
-        <img src="/logo.jpg" alt="حمّل" className="h-10 w-auto" />
-        <p className="text-xs text-primary-foreground/70">{getRoleLabel()}</p>
+        <div className="bg-white/20 p-1.5 rounded-xl backdrop-blur-sm">
+          <img src="/logo.jpg" alt="حمّل" className="h-9 w-auto rounded-lg" />
+        </div>
+        <p className="text-xs text-primary-foreground/80 font-medium">{getRoleLabel()}</p>
       </div>
 
       {/* Actions */}

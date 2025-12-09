@@ -69,8 +69,10 @@ export function Sidebar() {
       )}>
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="p-6 border-b border-sidebar-border">
-            <img src="/logo.jpg" alt="حمّل" className="h-12 w-auto" />
+          <div className="p-6 border-b border-sidebar-border flex items-center justify-center">
+            <div className="bg-gradient-to-br from-primary/20 to-accent/10 p-3 rounded-2xl">
+              <img src="/logo.jpg" alt="حمّل" className="h-14 w-auto rounded-xl shadow-lg" />
+            </div>
           </div>
 
           {/* User info */}
