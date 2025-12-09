@@ -107,7 +107,7 @@ export default function Auth() {
       <div className="w-full max-w-md space-y-6 animate-fade-in">
         {/* Logo */}
         <div className="text-center space-y-2">
-          <h1 className="text-4xl font-bold text-primary">اماس لوجستك</h1>
+          <img src="/logo.jpg" alt="حمّل" className="h-20 w-auto mx-auto" />
           <p className="text-muted-foreground">منصة الوساطة اللوجستية للنقل الثقيل</p>
         </div>
 

@@ -70,8 +70,7 @@ export function Sidebar() {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="p-6 border-b border-sidebar-border">
-            <h1 className="text-2xl font-bold text-primary">اماس لوجستك</h1>
-            <p className="text-sm text-sidebar-foreground/70 mt-1">منصة النقل الثقيل</p>
+            <img src="/logo.jpg" alt="حمّل" className="h-12 w-auto" />
           </div>
 
           {/* User info */}

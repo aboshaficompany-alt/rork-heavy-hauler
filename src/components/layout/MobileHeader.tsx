@@ -1,6 +1,5 @@
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { useAuth } from '@/hooks/useAuth';
-import { Truck } from 'lucide-react';
 
 export function MobileHeader() {
   const { profile, role } = useAuth();
@@ -18,13 +17,8 @@ export function MobileHeader() {
     <header className="fixed top-0 left-0 right-0 lg:hidden h-16 bg-primary z-50 px-4 flex items-center justify-between safe-area-top shadow-lg">
       {/* Logo */}
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-primary-foreground/20 flex items-center justify-center">
-          <Truck className="h-6 w-6 text-primary-foreground" />
-        </div>
-        <div>
-          <h1 className="text-base font-bold text-primary-foreground">اماس لوجستك</h1>
-          <p className="text-xs text-primary-foreground/70">{getRoleLabel()}</p>
-        </div>
+        <img src="/logo.jpg" alt="حمّل" className="h-10 w-auto" />
+        <p className="text-xs text-primary-foreground/70">{getRoleLabel()}</p>
       </div>
 
       {/* Actions */}
