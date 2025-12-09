@@ -103,12 +103,14 @@ export default function Auth() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/10 p-4">
       <div className="w-full max-w-md space-y-6 animate-fade-in">
         {/* Logo */}
-        <div className="text-center space-y-2">
-          <img src="/logo.jpg" alt="حمّل" className="h-20 w-auto mx-auto" />
-          <p className="text-muted-foreground">منصة الوساطة اللوجستية للنقل الثقيل</p>
+        <div className="text-center space-y-4">
+          <div className="inline-block bg-gradient-to-br from-primary/20 to-accent/10 p-4 rounded-3xl shadow-xl">
+            <img src="/logo.jpg" alt="حمّل" className="h-24 w-auto rounded-2xl shadow-lg" />
+          </div>
+          <p className="text-muted-foreground font-medium">منصة الوساطة اللوجستية للنقل الثقيل</p>
         </div>
 
         <Card className="border-border/50 shadow-lg">
