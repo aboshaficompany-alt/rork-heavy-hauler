@@ -32,12 +32,18 @@ const LocationPicker = ({
   const pickupMarker = useRef<mapboxgl.Marker | null>(null);
   const deliveryMarker = useRef<mapboxgl.Marker | null>(null);
   const carMarker = useRef<mapboxgl.Marker | null>(null);
+  const activeMarkerRef = useRef<MarkerType>('pickup');
   
   const { token: mapboxToken, loading: tokenLoading, error: tokenError } = useMapboxToken();
   const { getCurrentLocation, loading: gpsLoading } = useGPSLocation();
   const [activeMarker, setActiveMarker] = useState<MarkerType>('pickup');
   const [routeInfo, setRouteInfo] = useState<{ distance: string; duration: string } | null>(null);
   const [isLoadingRoute, setIsLoadingRoute] = useState(false);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    activeMarkerRef.current = activeMarker;
+  }, [activeMarker]);
 
   const createMarkerElement = (type: MarkerType) => {
     const el = document.createElement('div');
@@ -269,11 +275,12 @@ const LocationPicker = ({
 
       map.current.on('error', (e) => console.error('Mapbox error:', e));
 
-      // Handle map clicks
+      // Handle map clicks - use ref to get current activeMarker value
       map.current.on('click', (e) => {
         const { lng, lat } = e.lngLat;
+        const currentActiveMarker = activeMarkerRef.current;
         
-        if (activeMarker === 'pickup') {
+        if (currentActiveMarker === 'pickup') {
           onPickupChange(lat, lng);
           
           if (pickupMarker.current) {
