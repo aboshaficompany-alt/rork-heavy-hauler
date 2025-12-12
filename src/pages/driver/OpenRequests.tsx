@@ -105,9 +105,11 @@ export default function OpenRequests() {
   // Submit bid mutation
   const submitBidMutation = useMutation({
     mutationFn: async ({ shipmentId, price, notes }: { shipmentId: string; price: number; notes: string }) => {
+      if (!user?.id) throw new Error('User not authenticated');
+      
       const { error } = await supabase.from('bids').insert({
         shipment_id: shipmentId,
-        driver_id: user?.id,
+        driver_id: user.id,
         price,
         notes,
         status: 'pending',
