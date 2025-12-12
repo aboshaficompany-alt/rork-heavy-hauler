@@ -91,12 +91,27 @@ export default {
           from: { transform: "translateX(100%)" },
           to: { transform: "translateX(0)" },
         },
+        "scale-up": {
+          from: { transform: "scale(1)" },
+          to: { transform: "scale(1.02)" },
+        },
+        "lift": {
+          from: { transform: "translateY(0)", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" },
+          to: { transform: "translateY(-4px)", boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1)" },
+        },
+        "pulse-glow": {
+          "0%, 100%": { boxShadow: "0 0 0 0 hsl(var(--primary) / 0.4)" },
+          "50%": { boxShadow: "0 0 0 8px hsl(var(--primary) / 0)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "fade-in": "fade-in 0.3s ease-out",
         "slide-in": "slide-in 0.3s ease-out",
+        "scale-up": "scale-up 0.2s ease-out forwards",
+        "lift": "lift 0.2s ease-out forwards",
+        "pulse-glow": "pulse-glow 2s ease-in-out infinite",
       },
     },
   },

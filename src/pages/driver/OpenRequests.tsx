@@ -332,6 +332,38 @@ export default function OpenRequests() {
                         <DialogTitle>تقديم عرض سعر</DialogTitle>
                       </DialogHeader>
                       <div className="space-y-4 pt-4">
+                        {/* عرض تفاصيل الطلب */}
+                        <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+                          <div className="flex items-center gap-2 text-sm font-medium">
+                            <Truck className="h-4 w-4 text-primary" />
+                            <span>{shipment.equipment_type}</span>
+                          </div>
+                          <div className="flex items-start gap-2 text-sm">
+                            <MapPin className="h-4 w-4 text-success mt-0.5 shrink-0" />
+                            <div>
+                              <span className="text-muted-foreground">من: </span>
+                              {shipment.pickup_location}
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-2 text-sm">
+                            <MapPin className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+                            <div>
+                              <span className="text-muted-foreground">إلى: </span>
+                              {shipment.delivery_location}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground pt-2 border-t border-border">
+                            <div className="flex items-center gap-1">
+                              <Weight className="h-4 w-4" />
+                              {shipment.weight} طن
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-4 w-4" />
+                              {format(new Date(shipment.pickup_date), 'dd MMM yyyy', { locale: ar })}
+                            </div>
+                          </div>
+                        </div>
+
                         <div className="space-y-2">
                           <label className="text-sm font-medium">السعر (ريال)</label>
                           <Input
