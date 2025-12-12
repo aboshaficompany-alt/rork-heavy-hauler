@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Bid, BidStatus, Profile, Shipment, ShipmentStatus } from '@/types/database';
@@ -93,6 +94,9 @@ export default function Bids() {
   const pendingBids = bids.filter(b => b.status === 'pending');
   const processedBids = bids.filter(b => b.status !== 'pending');
 
+  // Check if there are no shipments at all
+  const noShipments = bids.length === 0;
+
   return (
     <DashboardLayout>
       <div className="space-y-6 animate-fade-in">
@@ -101,6 +105,20 @@ export default function Bids() {
           <h1 className="text-3xl font-bold text-foreground">العروض</h1>
           <p className="text-muted-foreground mt-1">مراجعة عروض السائقين على شحناتك</p>
         </div>
+
+        {noShipments ? (
+          <div className="bg-card rounded-xl p-12 border border-border text-center">
+            <Package className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+            <h2 className="text-xl font-bold mb-2">لا توجد عروض</h2>
+            <p className="text-muted-foreground mb-4">لم تتلقَ أي عروض على شحناتك بعد. قم بإنشاء شحنة جديدة لتلقي عروض من السائقين.</p>
+            <Button asChild>
+              <Link to="/shipments/new">إنشاء شحنة جديدة</Link>
+            </Button>
+          </div>
+        ) : (
+          <>
+
+        {/* Pending Bids */}
 
         {/* Pending Bids */}
         <div className="space-y-4">
@@ -207,6 +225,8 @@ export default function Bids() {
               ))}
             </div>
           </div>
+        )}
+          </>
         )}
       </div>
     </DashboardLayout>

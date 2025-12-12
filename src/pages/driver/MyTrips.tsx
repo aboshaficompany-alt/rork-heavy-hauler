@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent } from '@/components/ui/card';
@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 import { Link } from 'react-router-dom';
 import { 
   Package, 
@@ -20,7 +21,9 @@ import {
   DollarSign,
   Eye,
   Navigation,
-  ArrowLeft
+  ArrowLeft,
+  Trash2,
+  Loader2 as Loader2Icon
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
@@ -45,8 +48,10 @@ type BidWithShipment = {
 
 export default function MyTrips() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('all');
+  const [cancellingBid, setCancellingBid] = useState<string | null>(null);
 
   // Fetch driver's bids with shipment details
   const { data: bids, isLoading } = useQuery({
@@ -448,6 +453,52 @@ export default function MyTrips() {
                                 )}
                                 <ArrowLeft className="h-4 w-4 mr-auto" />
                               </Link>
+                            </Button>
+                          )}
+
+                          {/* Cancel Button for Pending Bids */}
+                          {bid.status === 'pending' && (
+                            <Button 
+                              variant="destructive" 
+                              size="sm"
+                              className="w-full gap-2"
+                              disabled={cancellingBid === bid.id}
+                              onClick={async () => {
+                                const confirmCancel = window.confirm('هل أنت متأكد من إلغاء هذا العرض؟');
+                                if (!confirmCancel) return;
+                                
+                                setCancellingBid(bid.id);
+                                try {
+                                  const { error } = await supabase
+                                    .from('bids')
+                                    .delete()
+                                    .eq('id', bid.id);
+                                  
+                                  if (error) throw error;
+                                  
+                                  toast({
+                                    title: 'تم إلغاء العرض',
+                                    description: 'تم حذف عرضك بنجاح',
+                                  });
+                                  queryClient.invalidateQueries({ queryKey: ['my-trips'] });
+                                } catch (error) {
+                                  console.error('Error cancelling bid:', error);
+                                  toast({
+                                    title: 'خطأ',
+                                    description: 'حدث خطأ أثناء إلغاء العرض',
+                                    variant: 'destructive',
+                                  });
+                                } finally {
+                                  setCancellingBid(null);
+                                }
+                              }}
+                            >
+                              {cancellingBid === bid.id ? (
+                                <Loader2Icon className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
+                              إلغاء العرض
                             </Button>
                           )}
                         </div>

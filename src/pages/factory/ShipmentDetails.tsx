@@ -175,6 +175,34 @@ export default function ShipmentDetails() {
     }
   };
 
+  const handleCancelShipment = async () => {
+    if (!shipment) return;
+    
+    const confirmCancel = window.confirm('هل أنت متأكد من إلغاء هذه الشحنة؟ لا يمكن التراجع عن هذا الإجراء.');
+    if (!confirmCancel) return;
+
+    try {
+      // Reject all pending bids
+      await supabase
+        .from('bids')
+        .update({ status: 'rejected' })
+        .eq('shipment_id', id)
+        .eq('status', 'pending');
+
+      // Update shipment status to cancelled
+      await supabase
+        .from('shipments')
+        .update({ status: 'cancelled' })
+        .eq('id', id);
+
+      toast.success('تم إلغاء الشحنة');
+      navigate('/shipments');
+    } catch (error) {
+      console.error('Error cancelling shipment:', error);
+      toast.error('حدث خطأ أثناء إلغاء الشحنة');
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -212,6 +240,13 @@ export default function ShipmentDetails() {
               تم الإنشاء في {format(new Date(shipment.created_at), 'PPP', { locale: ar })}
             </p>
           </div>
+          {/* Cancel Button for non-completed shipments */}
+          {['open', 'pending_bids'].includes(shipment.status) && (
+            <Button variant="destructive" size="sm" onClick={handleCancelShipment}>
+              <X className="h-4 w-4 ml-2" />
+              إلغاء الشحنة
+            </Button>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

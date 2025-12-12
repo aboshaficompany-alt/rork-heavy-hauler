@@ -52,6 +52,12 @@ interface BidData {
   driver_id: string;
 }
 
+interface FactoryProfile {
+  full_name: string;
+  phone: string | null;
+  company_name: string | null;
+}
+
 export default function ShipmentView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -60,6 +66,7 @@ export default function ShipmentView() {
   const { playSuccess, playTripComplete } = useNotificationSound();
   const [shipment, setShipment] = useState<ShipmentData | null>(null);
   const [myBid, setMyBid] = useState<BidData | null>(null);
+  const [factoryProfile, setFactoryProfile] = useState<FactoryProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [showChat, setShowChat] = useState(false);
 
@@ -93,6 +100,17 @@ export default function ShipmentView() {
 
       if (shipmentError) throw shipmentError;
       setShipment(shipmentData);
+
+      // Fetch factory profile for contact info
+      if (shipmentData.factory_id) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('full_name, phone, company_name')
+          .eq('user_id', shipmentData.factory_id)
+          .single();
+        
+        setFactoryProfile(profileData);
+      }
 
       // Fetch driver's bid for this shipment
       const { data: bidData } = await supabase
@@ -285,6 +303,41 @@ export default function ShipmentView() {
                   <p className="text-sm text-muted-foreground">ملاحظات</p>
                   <p className="font-medium">{shipment.notes}</p>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Factory Contact Info - Only show for accepted bids */}
+          {isAccepted && factoryProfile && (
+            <div className="mt-6 pt-6 border-t border-border">
+              <h3 className="font-bold mb-4">معلومات المنشأة</h3>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Truck className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">اسم المنشأة</p>
+                    <p className="font-medium">{factoryProfile.company_name || factoryProfile.full_name}</p>
+                  </div>
+                </div>
+                {factoryProfile.phone && (
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-success/10">
+                      <Navigation className="h-4 w-4 text-success" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">رقم الهاتف</p>
+                      <a 
+                        href={`tel:${factoryProfile.phone}`} 
+                        className="font-medium text-primary hover:underline"
+                        dir="ltr"
+                      >
+                        {factoryProfile.phone}
+                      </a>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
