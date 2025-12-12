@@ -503,32 +503,44 @@ const LocationPicker = ({
         </div>
       )}
 
+      {/* Location Status Warning */}
+      {(!pickupLat || !pickupLng || !deliveryLat || !deliveryLng) && (
+        <div className="flex items-center gap-2 p-3 bg-warning/10 border border-warning/20 rounded-lg">
+          <AlertCircle className="h-4 w-4 text-warning flex-shrink-0" />
+          <p className="text-sm text-warning">
+            {!pickupLat || !pickupLng 
+              ? 'يرجى تحديد موقع الاستلام على الخريطة' 
+              : 'يرجى تحديد موقع التسليم على الخريطة'}
+          </p>
+        </div>
+      )}
+
       {/* Coordinates display */}
       <div className="grid grid-cols-2 gap-4 text-xs">
-        <div className="p-3 rounded-lg bg-success/10 border border-success/20">
-          <p className="font-medium text-success mb-1 flex items-center gap-1">
+        <div className={`p-3 rounded-lg border ${pickupLat && pickupLng ? 'bg-success/10 border-success/20' : 'bg-warning/10 border-warning/20'}`}>
+          <p className={`font-medium mb-1 flex items-center gap-1 ${pickupLat && pickupLng ? 'text-success' : 'text-warning'}`}>
             <Navigation className="h-3 w-3" />
-            موقع الاستلام
+            موقع الاستلام *
           </p>
           {pickupLat && pickupLng ? (
             <p className="text-muted-foreground font-mono" dir="ltr">
               {pickupLat.toFixed(6)}, {pickupLng.toFixed(6)}
             </p>
           ) : (
-            <p className="text-muted-foreground">لم يتم التحديد</p>
+            <p className="text-warning">مطلوب - انقر على الخريطة</p>
           )}
         </div>
-        <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
-          <p className="font-medium text-destructive mb-1 flex items-center gap-1">
+        <div className={`p-3 rounded-lg border ${deliveryLat && deliveryLng ? 'bg-destructive/10 border-destructive/20' : 'bg-warning/10 border-warning/20'}`}>
+          <p className={`font-medium mb-1 flex items-center gap-1 ${deliveryLat && deliveryLng ? 'text-destructive' : 'text-warning'}`}>
             <Truck className="h-3 w-3" />
-            موقع التسليم
+            موقع التسليم *
           </p>
           {deliveryLat && deliveryLng ? (
             <p className="text-muted-foreground font-mono" dir="ltr">
               {deliveryLat.toFixed(6)}, {deliveryLng.toFixed(6)}
             </p>
           ) : (
-            <p className="text-muted-foreground">لم يتم التحديد</p>
+            <p className="text-warning">مطلوب - انقر على الخريطة</p>
           )}
         </div>
       </div>

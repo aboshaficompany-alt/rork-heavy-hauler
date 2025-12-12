@@ -110,6 +110,17 @@ export default function NewShipment() {
       return;
     }
 
+    // Validate map locations
+    if (!formData.pickup_lat || !formData.pickup_lng) {
+      toast.error('يرجى تحديد موقع الاستلام على الخريطة');
+      return;
+    }
+
+    if (!formData.delivery_lat || !formData.delivery_lng) {
+      toast.error('يرجى تحديد موقع التسليم على الخريطة');
+      return;
+    }
+
     if (!user) {
       toast.error('يجب تسجيل الدخول أولاً');
       return;

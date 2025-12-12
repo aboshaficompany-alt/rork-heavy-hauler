@@ -33,12 +33,13 @@ export default function ShipmentDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [shipment, setShipment] = useState<ShipmentWithBids | null>(null);
+  const [shipment, setShipment] = useState<(ShipmentWithBids & { driver_confirmed_delivery?: boolean; factory_confirmed_delivery?: boolean }) | null>(null);
   const [bids, setBids] = useState<Bid[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingBid, setProcessingBid] = useState<string | null>(null);
   const [hasRated, setHasRated] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [confirmingDelivery, setConfirmingDelivery] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -172,6 +173,38 @@ export default function ShipmentDetails() {
     } catch (error) {
       console.error('Error updating status:', error);
       toast.error('حدث خطأ أثناء تحديث الحالة');
+    }
+  };
+
+  const handleFactoryConfirmDelivery = async () => {
+    setConfirmingDelivery(true);
+    try {
+      const updates: any = { 
+        factory_confirmed_delivery: true,
+        factory_confirmed_at: new Date().toISOString()
+      };
+      
+      // If driver already confirmed, complete the shipment
+      if (shipment?.driver_confirmed_delivery) {
+        updates.status = 'completed';
+      }
+
+      await supabase
+        .from('shipments')
+        .update(updates)
+        .eq('id', id);
+
+      if (shipment?.driver_confirmed_delivery) {
+        toast.success('تم تأكيد التسليم من الطرفين! 🎉');
+      } else {
+        toast.success('تم تأكيد التسليم من طرفك، في انتظار تأكيد السائق');
+      }
+      fetchShipmentDetails();
+    } catch (error) {
+      console.error('Error confirming delivery:', error);
+      toast.error('حدث خطأ أثناء تأكيد التسليم');
+    } finally {
+      setConfirmingDelivery(false);
     }
   };
 
@@ -349,13 +382,58 @@ export default function ShipmentDetails() {
 
             {shipment.status === 'in_transit' && (
               <>
+                {/* Delivery Confirmation Section */}
                 <div className="bg-card rounded-xl p-6 border border-border">
-                  <h2 className="text-xl font-bold mb-4">تحديث الحالة</h2>
-                  <div className="flex gap-4">
-                    <Button onClick={() => handleUpdateStatus('completed')} className="bg-success hover:bg-success/90">
-                      تأكيد التسليم
-                    </Button>
+                  <h2 className="text-xl font-bold mb-4">تأكيد التسليم</h2>
+                  
+                  {/* Confirmation Status */}
+                  <div className="flex items-center gap-4 mb-4 p-4 bg-muted/50 rounded-lg">
+                    <div className={`flex items-center gap-2 ${shipment.driver_confirmed_delivery ? 'text-success' : 'text-muted-foreground'}`}>
+                      {shipment.driver_confirmed_delivery ? (
+                        <Check className="h-5 w-5" />
+                      ) : (
+                        <Loader2 className="h-5 w-5" />
+                      )}
+                      <span className="text-sm">تأكيد السائق</span>
+                    </div>
+                    <div className="w-px h-6 bg-border" />
+                    <div className={`flex items-center gap-2 ${shipment.factory_confirmed_delivery ? 'text-success' : 'text-muted-foreground'}`}>
+                      {shipment.factory_confirmed_delivery ? (
+                        <Check className="h-5 w-5" />
+                      ) : (
+                        <Loader2 className="h-5 w-5" />
+                      )}
+                      <span className="text-sm">تأكيد المنشأة</span>
+                    </div>
                   </div>
+
+                  {!shipment.factory_confirmed_delivery ? (
+                    <>
+                      <p className="text-muted-foreground mb-4">
+                        عند استلام الشحنة، اضغط على الزر لتأكيد التسليم. سيتم إكمال الشحنة عند تأكيد الطرفين.
+                      </p>
+                      <Button 
+                        onClick={handleFactoryConfirmDelivery} 
+                        className="w-full bg-success hover:bg-success/90"
+                        disabled={confirmingDelivery}
+                      >
+                        {confirmingDelivery && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
+                        <Check className="h-4 w-4 ml-2" />
+                        تأكيد استلام الشحنة
+                      </Button>
+                    </>
+                  ) : (
+                    <div className="bg-success/10 p-4 rounded-lg border border-success/20">
+                      <div className="flex items-center gap-2 text-success">
+                        <Check className="h-5 w-5" />
+                        <span className="font-medium">
+                          {shipment.driver_confirmed_delivery 
+                            ? 'تم تأكيد التسليم من الطرفين' 
+                            : 'تم تأكيد التسليم من طرفك، في انتظار تأكيد السائق'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Real-time Driver Tracking */}
