@@ -299,7 +299,11 @@ export type Database = {
           delivery_lat: number | null
           delivery_lng: number | null
           delivery_location: string
+          driver_confirmed_at: string | null
+          driver_confirmed_delivery: boolean | null
           equipment_type: string
+          factory_confirmed_at: string | null
+          factory_confirmed_delivery: boolean | null
           factory_id: string
           id: string
           notes: string | null
@@ -317,7 +321,11 @@ export type Database = {
           delivery_lat?: number | null
           delivery_lng?: number | null
           delivery_location: string
+          driver_confirmed_at?: string | null
+          driver_confirmed_delivery?: boolean | null
           equipment_type: string
+          factory_confirmed_at?: string | null
+          factory_confirmed_delivery?: boolean | null
           factory_id: string
           id?: string
           notes?: string | null
@@ -335,7 +343,11 @@ export type Database = {
           delivery_lat?: number | null
           delivery_lng?: number | null
           delivery_location?: string
+          driver_confirmed_at?: string | null
+          driver_confirmed_delivery?: boolean | null
           equipment_type?: string
+          factory_confirmed_at?: string | null
+          factory_confirmed_delivery?: boolean | null
           factory_id?: string
           id?: string
           notes?: string | null

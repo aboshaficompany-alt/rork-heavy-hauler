@@ -43,6 +43,8 @@ interface ShipmentData {
   factory_id: string;
   created_at: string;
   accepted_bid_id: string | null;
+  driver_confirmed_delivery: boolean;
+  factory_confirmed_delivery: boolean;
 }
 
 interface BidData {
@@ -145,18 +147,33 @@ export default function ShipmentView() {
     }
   };
 
-  const handleCompleteTrip = async () => {
+  const handleDriverConfirmDelivery = async () => {
     try {
+      const updates: any = { 
+        driver_confirmed_delivery: true,
+        driver_confirmed_at: new Date().toISOString()
+      };
+      
+      // If factory already confirmed, complete the shipment
+      if (shipment?.factory_confirmed_delivery) {
+        updates.status = 'completed';
+      }
+
       await supabase
         .from('shipments')
-        .update({ status: 'completed' })
+        .update(updates)
         .eq('id', id);
 
-      playTripComplete();
-      toast.success('تم تأكيد التسليم بنجاح! 🎉');
+      if (shipment?.factory_confirmed_delivery) {
+        playTripComplete();
+        toast.success('تم تأكيد التسليم من الطرفين! 🎉');
+      } else {
+        playSuccess();
+        toast.success('تم تأكيد التسليم من طرفك، في انتظار تأكيد المنشأة');
+      }
       fetchShipmentDetails();
     } catch (error) {
-      console.error('Error completing trip:', error);
+      console.error('Error confirming delivery:', error);
       toast.error('حدث خطأ أثناء تأكيد التسليم');
     }
   };
@@ -185,6 +202,9 @@ export default function ShipmentView() {
   const isInTransit = shipment.status === 'in_transit';
   const isCompleted = shipment.status === 'completed';
   const canTrack = isAccepted || isInTransit;
+  const driverConfirmed = shipment.driver_confirmed_delivery;
+  const factoryConfirmed = shipment.factory_confirmed_delivery;
+  const awaitingFactoryConfirmation = driverConfirmed && !factoryConfirmed && !isCompleted;
 
   return (
     <DashboardLayout>
@@ -371,7 +391,7 @@ export default function ShipmentView() {
         )}
 
         {/* In Transit Actions */}
-        {isInTransit && (
+        {isInTransit && !driverConfirmed && (
           <div className="bg-card rounded-xl p-6 border border-border">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 rounded-lg bg-success/10">
@@ -388,12 +408,25 @@ export default function ShipmentView() {
               </div>
             </div>
             <p className="text-muted-foreground mb-4">
-              بعد تسليم الشحنة للعميل، اضغط على الزر أدناه لتأكيد إتمام الرحلة.
+              بعد تسليم الشحنة للعميل، اضغط على الزر أدناه لتأكيد إتمام الرحلة. سيتم إكمال الشحنة عند تأكيد المنشأة أيضاً.
             </p>
-            <Button onClick={handleCompleteTrip} className="w-full gap-2 bg-success hover:bg-success/90">
+            <Button onClick={handleDriverConfirmDelivery} className="w-full gap-2 bg-success hover:bg-success/90">
               <CheckCircle className="h-4 w-4" />
               تأكيد التسليم
             </Button>
+          </div>
+        )}
+
+        {/* Awaiting Factory Confirmation */}
+        {awaitingFactoryConfirmation && (
+          <div className="bg-warning/10 rounded-xl p-6 border border-warning/20">
+            <div className="flex items-center gap-3">
+              <Loader2 className="h-8 w-8 text-warning animate-spin" />
+              <div>
+                <h2 className="text-xl font-bold text-warning">في انتظار تأكيد المنشأة</h2>
+                <p className="text-muted-foreground">تم تأكيد التسليم من طرفك، في انتظار تأكيد المنشأة لإكمال الشحنة</p>
+              </div>
+            </div>
           </div>
         )}
 
