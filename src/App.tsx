@@ -21,6 +21,7 @@ import MyTrips from "./pages/driver/MyTrips";
 import DriverHome from "./pages/driver/DriverHome";
 import ShipmentView from "./pages/driver/ShipmentView";
 import NotFound from "./pages/NotFound";
+import Install from "./pages/Install";
 import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
 
 const queryClient = new QueryClient();
@@ -83,6 +84,7 @@ function AppRoutes() {
       <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
       <Route path="/admin/shipments" element={<ProtectedRoute><AdminShipments /></ProtectedRoute>} />
       <Route path="/admin/stats" element={<ProtectedRoute><AdminStatistics /></ProtectedRoute>} />
+      <Route path="/install" element={<Install />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
