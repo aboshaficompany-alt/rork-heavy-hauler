@@ -208,18 +208,13 @@ export default function AdminUsers() {
 
     setIsDeleting(true);
     try {
-      // Delete vehicle if exists
-      if (deleteUser.vehicle?.id) {
-        await supabase.from('driver_vehicles').delete().eq('id', deleteUser.vehicle.id);
-      }
+      // Call edge function to delete user from auth
+      const { data, error: funcError } = await supabase.functions.invoke('delete-user', {
+        body: { userId: deleteUser.user_id }
+      });
 
-      // Note: Cannot delete auth user from client, only profile and related data
-      const { error } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('user_id', deleteUser.user_id);
-
-      if (error) throw error;
+      if (funcError) throw funcError;
+      if (data?.error) throw new Error(data.error);
 
       toast.success('تم حذف المستخدم بنجاح');
       setDeleteUser(null);

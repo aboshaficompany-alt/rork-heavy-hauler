@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,13 +9,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
-import { Truck, Factory, Loader2 } from 'lucide-react';
+import { Truck, Factory, Loader2, ArrowRight } from 'lucide-react';
 import { AppRole } from '@/types/database';
 
 export default function Auth() {
   const { user, signIn, signUp, loading } = useAuth();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState('');
@@ -52,6 +55,29 @@ export default function Auth() {
     } else {
       toast.success('تم تسجيل الدخول بنجاح');
       navigate('/dashboard');
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!forgotEmail) {
+      toast.error('يرجى إدخال البريد الإلكتروني');
+      return;
+    }
+
+    setIsSubmitting(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
+      redirectTo: `${window.location.origin}/auth?reset=true`,
+    });
+    setIsSubmitting(false);
+
+    if (error) {
+      toast.error('حدث خطأ أثناء إرسال رابط استعادة كلمة المرور');
+    } else {
+      toast.success('تم إرسال رابط استعادة كلمة المرور إلى بريدك الإلكتروني');
+      setShowForgotPassword(false);
+      setForgotEmail('');
     }
   };
 
@@ -113,6 +139,43 @@ export default function Auth() {
           <p className="text-muted-foreground font-medium">منصة الوساطة اللوجستية للنقل الثقيل</p>
         </div>
 
+        {/* Forgot Password Card */}
+        {showForgotPassword ? (
+          <Card className="border-border/50 shadow-lg">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" onClick={() => setShowForgotPassword(false)}>
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+                <CardTitle>استعادة كلمة المرور</CardTitle>
+              </div>
+              <CardDescription>أدخل بريدك الإلكتروني لاستلام رابط استعادة كلمة المرور</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="forgot-email">البريد الإلكتروني</Label>
+                  <Input
+                    id="forgot-email"
+                    type="email"
+                    placeholder="example@company.com"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    dir="ltr"
+                    className="text-right"
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <Loader2 className="h-4 w-4 animate-spin ml-2" />
+                  ) : null}
+                  إرسال رابط الاستعادة
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        ) : (
+
         <Card className="border-border/50 shadow-lg">
           <Tabs defaultValue="login" className="w-full">
             <CardHeader className="pb-0">
@@ -156,6 +219,14 @@ export default function Auth() {
                     ) : null}
                     تسجيل الدخول
                   </Button>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotPassword(true)}
+                    className="w-full text-sm text-primary hover:underline"
+                  >
+                    نسيت كلمة المرور؟
+                  </button>
                 </form>
               </TabsContent>
 
@@ -284,6 +355,7 @@ export default function Auth() {
             </CardContent>
           </Tabs>
         </Card>
+        )}
       </div>
     </div>
   );

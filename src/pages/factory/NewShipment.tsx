@@ -194,7 +194,7 @@ export default function NewShipment() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="equipment_details">تفاصيل المعدّة</Label>
               <Input
@@ -202,9 +202,12 @@ export default function NewShipment() {
                 placeholder="مثال: مولد كهربائي، ماكينة صناعية..."
                 value={formData.equipment_type.includes(' - ') ? formData.equipment_type.split(' - ')[1] : ''}
                 onChange={(e) => {
-                  const vehicleType = vehicleTypes.find(t => formData.equipment_type.startsWith(t.label));
-                  if (vehicleType) {
-                    handleChange('equipment_type', e.target.value ? `${vehicleType.label} - ${e.target.value}` : vehicleType.label);
+                  // Find the base vehicle type from the current equipment_type
+                  const currentVehicleType = vehicleTypes.find(t => 
+                    formData.equipment_type === t.label || formData.equipment_type.startsWith(t.label + ' - ')
+                  );
+                  if (currentVehicleType) {
+                    handleChange('equipment_type', e.target.value ? `${currentVehicleType.label} - ${e.target.value}` : currentVehicleType.label);
                   }
                 }}
               />
