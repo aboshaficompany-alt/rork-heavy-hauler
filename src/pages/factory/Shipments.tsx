@@ -31,7 +31,7 @@ export default function Shipments() {
         .from('shipments')
         .select(`
           *,
-          bids(count)
+          bids!bids_shipment_id_fkey(count)
         `)
         .eq('factory_id', user.id)
         .order('created_at', { ascending: false });
