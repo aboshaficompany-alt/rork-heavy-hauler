@@ -9,11 +9,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
-import { Truck, Factory, Loader2, ArrowRight } from 'lucide-react';
+import { Truck, Factory, Loader2, ArrowRight, Download } from 'lucide-react';
 import { AppRole } from '@/types/database';
+
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
 
 export default function Auth() {
   const { user, signIn, signUp, loading } = useAuth();
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isInstalled, setIsInstalled] = useState(false);
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
@@ -33,10 +40,44 @@ export default function Auth() {
   const [selectedRole, setSelectedRole] = useState<'factory' | 'driver'>('factory');
 
   useEffect(() => {
+    // Check if already installed
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setIsInstalled(true);
+    }
+
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  useEffect(() => {
     if (user && !loading) {
       navigate('/dashboard');
     }
   }, [user, loading, navigate]);
+
+  const handleInstall = async () => {
+    if (!deferredPrompt) {
+      navigate('/install');
+      return;
+    }
+    
+    await deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    
+    if (outcome === 'accepted') {
+      setIsInstalled(true);
+      toast.success('تم تثبيت التطبيق بنجاح!');
+    }
+    setDeferredPrompt(null);
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -137,6 +178,18 @@ export default function Auth() {
             <img src="/logo.jpg" alt="حمّل" className="h-24 w-auto rounded-2xl shadow-lg" />
           </div>
           <p className="text-muted-foreground font-medium">منصة الوساطة اللوجستية للنقل الثقيل</p>
+          
+          {/* Install App Button */}
+          {!isInstalled && (
+            <Button 
+              onClick={handleInstall}
+              variant="outline"
+              className="gap-2"
+            >
+              <Download className="h-4 w-4" />
+              تحميل التطبيق
+            </Button>
+          )}
         </div>
 
         {/* Forgot Password Card */}
